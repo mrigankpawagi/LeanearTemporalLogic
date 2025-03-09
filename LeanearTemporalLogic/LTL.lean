@@ -22,46 +22,61 @@ namespace LTLFormula
 
 /-!
 We will now add some more operators for convenience.
--/
-
--- False
-def False : LTLFormula := not True
-
--- Or
-def or (ϕ ψ : LTLFormula) : LTLFormula := not (and (not ϕ) (not ψ))
-
--- Eventually
-def eventually (ϕ : LTLFormula) : LTLFormula := LTLFormula.until True ϕ
-
--- Always
-def always (ϕ : LTLFormula) : LTLFormula := not (eventually (not ϕ))
-
-/-!
-We will also define some syntactic sugar for the operators.
+We will also define some syntactic sugar for the operators, avoiding clashes with the existing operators on `Prop`.
 -/
 
 -- `¬ϕ` for `not ϕ`
-prefix:40 (priority := high) "¬ " => not
+class Not (α: Type) where
+  not : α → α
+
+instance : Not Prop := ⟨fun p ↦ ¬ p⟩
+instance : Not LTLFormula := ⟨LTLFormula.not⟩
+prefix:50 (priority := high) "¬ " => Not.not
+
+attribute [match_pattern] Not.not
+@[simp] theorem not_def (ϕ : LTLFormula) : (¬ ϕ) = LTLFormula.not ϕ := rfl
 
 -- `ϕ ∧ ψ` for `and ϕ ψ`
-infixl:50 (priority := high) " ∧ " => and
+class And (α : Type) where
+  and : α → α → α
+
+instance : And Prop := ⟨fun p q ↦ p ∧ q⟩
+instance : And LTLFormula := ⟨LTLFormula.and⟩
+infixl:65 (priority := high) " ∧ " => And.and
+
+attribute [match_pattern] And.and
+@[simp] theorem and_def (ϕ ψ : LTLFormula) : (ϕ ∧ ψ) = LTLFormula.and ϕ ψ := rfl
 
 -- `ϕ ∨ ψ` for `or ϕ ψ`
-infixl:50 (priority := high) " ∨ " => or
+class Or (α : Type) where
+  or : α → α → α
+
+instance : Or Prop := ⟨fun p q ↦ p ∨ q⟩
+instance : Or LTLFormula := ⟨fun ϕ ψ ↦ ¬ ((¬ ϕ) ∧ (¬ ψ))⟩
+infixl:65 (priority := high) " ∨ " => Or.or
+def or (ϕ ψ : LTLFormula) : LTLFormula := Or.or ϕ ψ
+
+attribute [match_pattern] Or.or
+@[simp] theorem or_def (ϕ ψ : LTLFormula) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
 
 -- `◯ ϕ` for `next ϕ`
-prefix:100 (priority := high) "◯ " => next
+prefix:65 (priority := high) "◯ " => next
 
 -- `ϕ 𝓤 ψ` for `until ϕ ψ`
-infixl:60 (priority := high) " 𝓤 " => LTLFormula.until
+infixl:50 (priority := high) " 𝓤 " => LTLFormula.until
 
+-- Eventually
 -- `♢ ϕ` for `eventually ϕ`
-prefix:100 (priority := high) "♢ " => eventually
+def eventually (ϕ : LTLFormula) : LTLFormula := LTLFormula.until True ϕ
+prefix:65 (priority := high) "♢ " => eventually
 
+-- Always
 -- `□ ϕ` for `always ϕ`
-prefix:100 (priority := high) "□ " => always
+def always (ϕ : LTLFormula) : LTLFormula := not (eventually (not ϕ))
+prefix:65 (priority := high) "□ " => always
 
 -- `⊤` for `True` and `⊥` for `False`
+def False : LTLFormula := not True
 notation "⊤" => True
 notation "⊥" => False
 
@@ -69,7 +84,7 @@ notation "⊥" => False
 /-!
 The *length* of a formula is the number of operators in it. We count only the basic operators.
 -/
-def length : LTLFormula → Nat
+def length : LTLFormula → ℕ
 | ⊤ => 0
 | atom _ => 0
 | ¬ ϕ => 1 + length ϕ
@@ -81,7 +96,7 @@ def length : LTLFormula → Nat
 We will define some lemmas to make it easier to calculate the length of a formula with other operators.
 -/
 def length_or (ϕ ψ : LTLFormula) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
-  rw [or]
+  simp
   repeat rw [length]
   omega
 
