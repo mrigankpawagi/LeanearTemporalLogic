@@ -106,9 +106,54 @@ theorem world_satisfies_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ϕ)
     simp [Satisfaction.Satisfies] at h
     apply h
 
-theorem world_satisfies_always_eventually (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := sorry
+theorem world_satisfies_always_eventually (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
+  constructor
 
-theorem world_satisfies_eventually_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := sorry
+  -- left to right
+  · intro h
+    intro i
+    rw [world_satisfies_always] at h
+    specialize h i
+    rw [world_satisfies_eventually] at h
+    obtain ⟨j, hj⟩ := h
+    rw [suffix_composition] at hj
+    use j
+
+  -- right to left
+  · intro h
+    rw [world_satisfies_always]
+    intro i
+    rw [world_satisfies_eventually]
+    specialize h i
+    obtain ⟨j, hj⟩ := h
+    use j
+    rw [suffix_composition]
+    assumption
+
+theorem world_satisfies_eventually_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
+  constructor
+
+  -- left to right
+  · intro h
+    rw [world_satisfies_eventually] at h
+    obtain ⟨i, hi⟩ := h
+    use i
+    intro j
+    rw [world_satisfies_always] at hi
+    specialize hi j
+    rw [suffix_composition] at hi
+    assumption
+
+  -- right to left
+  · intro h
+    rw [world_satisfies_eventually]
+    obtain ⟨i, hi⟩ := h
+    use i
+    rw [world_satisfies_always]
+    intro j
+    specialize hi j
+    rw [suffix_composition]
+    assumption
 
 
 /-!
