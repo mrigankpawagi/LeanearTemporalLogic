@@ -31,10 +31,15 @@ macro_rules
 /-!
 A simple lemma for composition of suffixes.
 -/
-def suffix_composition (σ : World) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
+theorem suffix_composition (σ : World) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
   funext k
   unfold suffix
   rw [Nat.add_assoc]
+
+theorem suffix_zero_identity (σ : World) : σ[0…] = σ := by
+  funext k
+  unfold suffix
+  rw [Nat.zero_add]
 
 /-!
 Now we define what it means for a world to satisfy an LTL formula.
@@ -56,6 +61,34 @@ instance : Satisfaction World LTLFormula := ⟨world_satisfies_ltl⟩
 We will also define some useful lemmas for satisfaction.
 -/
 def world_satisfies_negation (σ : World) (ϕ : LTLFormula) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+  simp [Satisfaction.Satisfies]
+  rw [world_satisfies_ltl]
+
+def world_satisfies_or (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
+  simp [Satisfaction.Satisfies]
+  repeat rw [world_satisfies_ltl]
+  simp [Or.or, Not.not]
+  constructor
+  · intro h
+    contrapose h
+    simp at h
+    simp
+    assumption
+  · intro h
+    contrapose h
+    simp at h
+    simp
+    assumption
+
+def world_satisfies_next (σ : World) (ϕ : LTLFormula) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
+  simp [Satisfaction.Satisfies]
+  rw [world_satisfies_ltl]
+
+def world_satisfies_and (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+  simp [Satisfaction.Satisfies]
+  repeat rw [world_satisfies_ltl]
+
+def world_satisfies_until (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
   simp [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
@@ -509,6 +542,322 @@ theorem ltl_idempotence_until_right (ϕ ψ : LTLFormula) : (ϕ 𝓤 (ψ 𝓤 ψ)
       · intro k
         intro hk
         simp at hk
+    · assumption
+
+theorem ltl_absorption_always_eventually (ϕ : LTLFormula) : (♢ □ ♢ ϕ) ≡ (□ ♢ ϕ) := by
+  simp [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp [Worlds]
+  rw [world_satisfies_eventually]
+  constructor
+  · intro h
+    obtain ⟨i, hi⟩ := h
+    rw [world_satisfies_always_eventually] at hi
+    rw [world_satisfies_always_eventually]
+    intro i'
+    specialize hi i'
+    obtain ⟨j, hj⟩ := hi
+    use i + j
+    rw [suffix_composition] at hj
+    rw [← Nat.add_assoc, Nat.add_comm i' i]
+    rw [← Nat.add_assoc] at hj
+    assumption
+  · intro h
+    use 0
+    rw [suffix_zero_identity]
+    assumption
+
+theorem ltl_absorption_eventually_always (ϕ : LTLFormula) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
+  simp [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp [Worlds]
+  rw [world_satisfies_always]
+  constructor
+  · intro h
+    specialize h 0
+    rw [suffix_zero_identity] at h
+    assumption
+  · intro h
+    intro i
+    rw [world_satisfies_eventually_always] at h
+    obtain ⟨i', hi⟩ := h
+    rw [world_satisfies_eventually_always]
+    use i'
+    intro j
+    specialize hi (i + j)
+    rw [suffix_composition]
+    rw [← Nat.add_assoc]
+    rw [← Nat.add_assoc, Nat.add_comm i' i] at hi
+    assumption
+
+theorem ltl_expansion_until (ϕ ψ : LTLFormula) : (ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ)))) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_or]
+  simp [Satisfaction.Satisfies]
+  constructor
+  · intro h
+    rw [world_satisfies_ltl] at h
+    obtain ⟨j, hj⟩ := h
+    obtain ⟨hl, hr⟩ := hj
+    rw [world_satisfies_ltl]
+    cases c: j with
+    | zero =>
+      rw [c] at hl
+      rw [suffix_zero_identity] at hl
+      left
+      assumption
+    | succ n =>
+      right
+      have p : 0 < j := by
+        rw [c]
+        apply Nat.zero_lt_succ
+      have hr' := hr 0 p
+      rw [suffix_zero_identity] at hr'
+      constructor
+      · assumption
+      · repeat rw [world_satisfies_ltl]
+        use n
+        rw [suffix_composition]
+        rw [c] at hl
+        rw [Nat.add_comm]
+        constructor
+        · assumption
+        · intro k
+          intro hk
+          rw [suffix_composition]
+          have p' : k + 1 < j := by
+            rw [c]
+            have p'' : k + 1 < n + 1 := by
+              apply Nat.succ_lt_succ
+              assumption
+            assumption
+          specialize hr (k + 1) p'
+          rw [Nat.add_comm]
+          assumption
+  · intro h
+    rw [world_satisfies_ltl]
+    cases h with
+    | inl hl =>
+        use 0
+        rw [suffix_zero_identity]
+        constructor
+        · assumption
+        · simp
+    | inr hr =>
+        rw [world_satisfies_ltl] at hr
+        obtain ⟨hll, hrr⟩ := hr
+        repeat rw [world_satisfies_ltl] at hrr
+        obtain ⟨j, hj⟩ := hrr
+        use j + 1
+        rw [suffix_composition, Nat.add_comm] at hj
+        obtain ⟨hjl, hjr⟩ := hj
+        constructor
+        · assumption
+        · intro k
+          intro hk
+          cases c: k with
+          | zero =>
+            rw [suffix_zero_identity]
+            assumption
+          | succ n =>
+            rw [c] at hk
+            rw [Nat.succ_lt_succ_iff] at hk
+            specialize hjr n hk
+            rw [suffix_composition] at hjr
+            rw [Nat.add_comm]
+            assumption
+
+theorem ltl_expansion_eventually (ϕ : LTLFormula) : (♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ))) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_or]
+  simp
+  constructor
+  · intro h
+    rw [world_satisfies_eventually] at h
+    obtain ⟨i, hi⟩ := h
+    cases c: i with
+    | zero =>
+      rw [c] at hi
+      rw [suffix_zero_identity] at hi
+      left
+      assumption
+    | succ n =>
+      right
+      rw [world_satisfies_next]
+      rw [world_satisfies_eventually]
+      use n
+      rw [suffix_composition]
+      rw [c] at hi
+      rw [Nat.add_comm]
+      assumption
+  · intro h
+    rw [world_satisfies_eventually]
+    cases h with
+    | inl hl =>
+      use 0
+      rw [suffix_zero_identity]
+      assumption
+    | inr hr =>
+      rw [world_satisfies_next] at hr
+      rw [world_satisfies_eventually] at hr
+      obtain ⟨j, hj⟩ := hr
+      use j + 1
+      rw [suffix_composition, Nat.add_comm] at hj
+      assumption
+
+theorem ltl_expansion_always (ϕ : LTLFormula) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ))) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_and]
+  simp
+  rw [world_satisfies_next]
+  repeat rw [world_satisfies_always]
+  constructor
+  · intro h
+    constructor
+    · specialize h 0
+      rw [suffix_zero_identity] at h
+      assumption
+    · intro i
+      specialize h (i + 1)
+      rw [suffix_composition, Nat.add_comm]
+      assumption
+  · intro h
+    intro i
+    obtain ⟨hl, hr⟩ := h
+    cases c: i with
+    | zero =>
+      rw [suffix_zero_identity]
+      assumption
+    | succ n =>
+      specialize hr n
+      rw [suffix_composition, Nat.add_comm] at hr
+      assumption
+
+theorem ltl_distributive_next_until (ϕ ψ : LTLFormula) : (◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ)) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_next]
+  repeat rw [world_satisfies_until]
+  simp
+  constructor
+  · intro h
+    obtain ⟨j, hj⟩ := h
+    use j
+    rw [suffix_composition] at hj
+    rw [world_satisfies_next]
+    rw [suffix_composition]
+    rw [Nat.add_comm]
+    obtain ⟨hl, hr⟩ := hj
+    constructor
+    · assumption
+    · intro k
+      intro hk
+      specialize hr k hk
+      rw [world_satisfies_next]
+      rw [suffix_composition]
+      rw [suffix_composition] at hr
+      rw [Nat.add_comm]
+      assumption
+  · intro h
+    obtain ⟨j, hj⟩ := h
+    use j
+    rw [world_satisfies_next] at hj
+    rw [suffix_composition] at hj
+    rw [suffix_composition]
+    rw [Nat.add_comm]
+    obtain ⟨hl, hr⟩ := hj
+    constructor
+    · assumption
+    · intro k
+      intro hk
+      specialize hr k hk
+      rw [world_satisfies_next] at hr
+      rw [suffix_composition]
+      rw [suffix_composition] at hr
+      rw [Nat.add_comm]
+      assumption
+
+theorem ltl_distributive_eventually_or (ϕ ψ : LTLFormula) : (♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ)) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_eventually]
+  repeat rw [world_satisfies_or]
+  simp only [eq_iff_iff]
+  constructor
+  · intro h
+    repeat rw [world_satisfies_eventually]
+    obtain ⟨i, hi⟩ := h
+    rw [world_satisfies_or] at hi
+    cases hi with
+    | inl hl =>
+      left
+      use i
+    | inr hr =>
+      right
+      use i
+  · intro h
+    cases h with
+    | inl hl =>
+      rw [world_satisfies_eventually] at hl
+      obtain ⟨i, hi⟩ := hl
+      use i
+      rw [world_satisfies_or]
+      left
+      assumption
+    | inr hr =>
+      rw [world_satisfies_eventually] at hr
+      obtain ⟨i, hi⟩ := hr
+      use i
+      rw [world_satisfies_or]
+      right
+      assumption
+
+theorem ltl_distributive_always_and (ϕ ψ : LTLFormula) : (□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ)) := by
+  simp only [Equivalent.Equiv]
+  unfold equivalent_ltl
+  funext σ
+  simp only [Worlds]
+  rw [world_satisfies_always]
+  repeat rw [world_satisfies_and]
+  simp only [eq_iff_iff]
+  constructor
+  · intro h
+    repeat rw [world_satisfies_always]
+    constructor
+    · intro i
+      specialize h i
+      rw [world_satisfies_and] at h
+      obtain ⟨hl, hr⟩ := h
+      assumption
+    · intro i
+      specialize h i
+      rw [world_satisfies_and] at h
+      obtain ⟨hl, hr⟩ := h
+      assumption
+  · intro h
+    repeat rw [world_satisfies_always] at h
+    intro i
+    obtain ⟨hl, hr⟩ := h
+    specialize hl i
+    specialize hr i
+    rw [world_satisfies_and]
+    constructor
+    · assumption
     · assumption
 
 end section
