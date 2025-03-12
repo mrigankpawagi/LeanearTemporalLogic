@@ -860,4 +860,114 @@ theorem ltl_distributive_always_and (ϕ ψ : LTLFormula) : (□ (ϕ ∧ ψ)) ≡
     · assumption
     · assumption
 
+
+/-!
+Now we prove the lemma that "Until is the Least Solution of the Expansion Law"
+-/
+def solution_of_expansion_law (ϕ ψ : LTLFormula) (P : Set World) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
+
+theorem until_least_solution_of_expansion_law (ϕ ψ : LTLFormula) : (solution_of_expansion_law ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
+  unfold solution_of_expansion_law
+  unfold Worlds
+  simp
+  constructor
+
+  -- we first show that it is indeed a solution
+  · constructor
+    · intro σ
+      intro h
+      rw [Set.mem_def] at h
+      rw [Set.mem_def]
+      rw [world_satisfies_until]
+      use 0
+      rw [suffix_zero_identity]
+      constructor
+      · assumption
+      · intro k
+        intro hk
+        simp at hk
+    · intro σ
+      intro h
+      rw [Set.mem_sep_iff] at h
+      rw [Set.mem_def] at h
+      rw [Set.mem_def]
+      obtain ⟨hl, hr⟩ := h
+      rw [Set.mem_def] at hr
+      rw [world_satisfies_until]
+      rw [world_satisfies_until] at hr
+      obtain ⟨j, hj⟩ := hr
+      rw [suffix_composition] at hj
+      use (1 + j)
+      obtain ⟨hjl, hjr⟩ := hj
+      constructor
+      · assumption
+      · intro k
+        intro hk
+        cases c: k with
+        | zero =>
+          rw [suffix_zero_identity]
+          assumption
+        | succ n =>
+          rw [c] at hk
+          rw [Nat.add_comm 1 j] at hk
+          rw [Nat.succ_lt_succ_iff] at hk
+          specialize hjr n hk
+          rw [suffix_composition] at hjr
+          rw [Nat.add_comm]
+          assumption
+
+  -- now we show that it is the least solution
+  · intro P
+    intro h
+    intro h₁
+    rw [Set.subset_def]
+    intro σ
+    intro h'
+    rw [Set.mem_def] at h'
+    rw [world_satisfies_until] at h'
+    obtain ⟨j, hj⟩ := h'
+    obtain ⟨hjl, hjr⟩ := hj
+    rw [Set.subset_def] at h
+    specialize h (σ[j…])
+    rw [Set.mem_def] at h
+    apply h at hjl
+
+    -- we perform backwards induction on j
+    let b (k: ℕ) : ∀ (n: ℕ), (j = n + k) → (σ[n…]) ∈ P := by
+      induction k with
+      | zero =>
+        intro n
+        intro hn
+        simp at hn
+        rw [← hn]
+        assumption
+      | succ m ih =>
+        intro n
+        intro hn
+        rw [Nat.add_comm m 1] at hn
+        rw [← Nat.add_assoc] at hn
+        specialize ih (n + 1) hn
+        have h₀ : 0 < (1 + m) := by
+          apply Nat.zero_lt_of_ne_zero
+          rw [Nat.add_comm]
+          apply Nat.succ_ne_zero
+        rw [← @Nat.add_lt_add_iff_left n, Nat.add_zero, ← Nat.add_assoc, ← hn] at h₀
+        specialize hjr n h₀
+        rw [Set.subset_def] at h₁
+        specialize h₁ (σ[n…])
+        apply h₁
+        rw [Set.mem_sep_iff]
+        rw [Set.mem_def]
+        constructor
+        · assumption
+        · rw [suffix_composition]
+          assumption
+
+    have h₀ : σ[0…] ∈ P := by
+      apply b j 0
+      simp
+
+    rw [suffix_zero_identity] at h₀
+    assumption
+
 end section
