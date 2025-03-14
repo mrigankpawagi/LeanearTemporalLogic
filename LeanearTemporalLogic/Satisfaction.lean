@@ -1,10 +1,11 @@
 import Mathlib
 import LeanearTemporalLogic.LTL
+import LeanearTemporalLogic.TransitionSystems
 
 /-!
 We will define a satisfaction relation as a type class. This will allow us to define satisfaction for different types of models.
 -/
-class Satisfaction (α β : Type) where
+class Satisfaction (α : Type u) (β : Type v) where
   Satisfies : α → β → Prop
 
 infixl:70 (priority := high) " ⊨ " => Satisfaction.Satisfies
@@ -969,5 +970,42 @@ theorem until_least_solution_of_expansion_law (ϕ ψ : LTLFormula) : (solution_o
 
     rw [suffix_zero_identity] at h₀
     assumption
+
+end section
+
+
+/-!
+Now we define **Linear Time Properties**, or LT properties, over a set of atomic propositions.
+-/
+def LTProperty (AP: Type) := Set (ℕ → (Set AP))
+
+section
+open TransitionSystem
+/-!
+We will define a satisfaction relation between transition systems and LT properties. For this, both must be defined over the same set of atomic propositions. Note that we specifically deal with Transition Systems without terminal states.
+-/
+
+-- we will need membership of an InfiniteTrace in an LTProperty
+instance {TS : TransitionSystem} : Membership (InfiniteTrace TS) (LTProperty TS.AP) := ⟨fun P T ↦ by
+  rw [LTProperty] at P
+  rw [InfiniteTrace] at T
+  apply T ∈ P⟩
+
+def transitionSystem_satifies_LTProperty (TSwts: TransitionSystemWTS) (P: LTProperty TSwts.TS.AP) : Prop :=
+  TracesWTS TSwts ⊆ P
+
+instance {TSwts: TransitionSystemWTS} : Satisfaction (TransitionSystemWTS) (LTProperty TSwts.TS.AP) := ⟨fun _σ P ↦ transitionSystem_satifies_LTProperty TSwts P⟩
+
+def state_satisfies_LTProperty {TSwts: TransitionSystemWithoutTerminalStates} (s: TSwts.TS.S) (P: LTProperty TSwts.TS.AP) : Prop :=
+  TracesFromStateWTS s ⊆ P
+
+instance {TSwts: TransitionSystemWTS} : Satisfaction (TSwts.TS.S) (LTProperty TSwts.TS.AP) := ⟨state_satisfies_LTProperty⟩
+
+/-!
+We now prove a theorem about **Trace Inclusion and LT Properties**.
+-/
+-- TODO
+theorem trace_inclusion_and_LTProperties : False := by
+  sorry
 
 end section

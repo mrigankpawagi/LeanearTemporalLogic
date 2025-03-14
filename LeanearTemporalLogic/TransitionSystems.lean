@@ -53,6 +53,8 @@ Terminal states have no successors.
 -/
 def isTerminalState {TS : TransitionSystem} (s : TS.S) : Prop := Post s = ∅
 
+def hasNoTerminalStates (TS : TransitionSystem) : Prop := ∀ s : TS.S, ¬ isTerminalState s
+
 /-!
 Execution fragments can be finite or infinite alternating sequences of states and actions, ending in a state.
 -/
@@ -80,6 +82,14 @@ def startStateExecutionFragment {TS : TransitionSystem} (e: ExecutionFragment TS
 
 def endStateExecutionFragment {TS : TransitionSystem} {n : ℕ} (e: FiniteExecutionFragment TS n) : TS.S := e.states (Fin.last n)
 
+def isFiniteExecutionFragment {TS : TransitionSystem} (e: ExecutionFragment TS) : Prop := match e with
+  | ExecutionFragment.finite _ => True
+  | _ => False
+
+def isInfiniteExecutionFragment {TS : TransitionSystem} (e: ExecutionFragment TS) : Prop := match e with
+  | ExecutionFragment.infinite _ => True
+  | _ => False
+
 /-!
 A *maximal* execution fragment is either finite and ending in a terminal state, or infinite.
 -/
@@ -87,6 +97,32 @@ def isMaximalExecutionFragment {TS : TransitionSystem} (e: ExecutionFragment TS)
   match e with
   | ExecutionFragment.finite e => isTerminalState (endStateExecutionFragment e)
   | _ => True
+
+/-!
+For a transition system without terminal states, maximal execution fragments coincide with infinite execution fragments.
+-/
+theorem maximalIffInfiniteExecutionFragment {TS : TransitionSystem} (h : hasNoTerminalStates TS) (e: ExecutionFragment TS) : isMaximalExecutionFragment e ↔ isInfiniteExecutionFragment e := by
+  unfold isInfiniteExecutionFragment
+  unfold isMaximalExecutionFragment
+  unfold hasNoTerminalStates at h
+  constructor
+  · intro hmax
+    cases e with
+    | finite e =>
+      simp
+      simp at hmax
+      specialize h (endStateExecutionFragment e)
+      contradiction
+    | infinite e =>
+      simp
+  · intro hinf
+    cases e with
+    | finite e =>
+      simp
+      simp at hinf
+    | infinite e =>
+      simp
+
 
 /-!
 An *initial* execution fragment is one that starts in an initial state.
@@ -151,6 +187,10 @@ def isFinitePathFragment {TS : TransitionSystem} (π: PathFragment TS) : Prop :=
   | PathFragment.finite _ => True
   | _ => False
 
+def isInfinitePathFragment {TS : TransitionSystem} (π: PathFragment TS) : Prop := match π with
+  | PathFragment.infinite _ => True
+  | _ => False
+
 /-!
 A *maximal* path fragment is either finite and ending in a terminal state, or infinite.
 A *initial* path fragment is one that starts in an initial state.
@@ -159,6 +199,32 @@ def isMaximalPathFragment {TS : TransitionSystem} (π: PathFragment TS) : Prop :
   match (endStatePathFragment π) with
   | some s => isTerminalState s
   | none => True
+
+/-!
+Similar to execution fragments, maximal path fragments coincide with infinite path fragments in transition systems without terminal states.
+-/
+theorem maximalIffInfinitePathFragment {TS : TransitionSystem} (h : hasNoTerminalStates TS) (π: PathFragment TS) : isMaximalPathFragment π ↔ isInfinitePathFragment π := by
+  unfold isMaximalPathFragment
+  unfold isInfinitePathFragment
+  unfold endStatePathFragment
+  unfold hasNoTerminalStates at h
+  constructor
+  · intro hmax
+    cases π with
+    | @finite n π =>
+      simp
+      simp at hmax
+      specialize h (π.states (Fin.last n))
+      contradiction
+    | infinite π =>
+      simp
+  · intro hinf
+    cases π with
+    | finite π =>
+      simp
+      simp at hinf
+    | infinite π =>
+      simp
 
 def isInitialPathFragment {TS : TransitionSystem} (π: PathFragment TS) : Prop := TS.I (startStatePathFragment π)
 
@@ -184,34 +250,71 @@ def PathsFinFromState {TS : TransitionSystem} (s: TS.S) : Set (PathFragment TS) 
 /-!
 The *trace* of a path fragment is its projection onto 2^AP.
 -/
-structure FiniteTrace (TS: TransitionSystem) (n : ℕ) where
-  states : Fin (n + 1) → Set TS.AP
+def FiniteTrace (TS: TransitionSystem) (n : ℕ) := Fin (n + 1) → Set TS.AP
 
-structure InfiniteTrace (TS: TransitionSystem) where
-  states : ℕ → Set TS.AP
+def InfiniteTrace (TS: TransitionSystem) := ℕ → Set TS.AP
 
 inductive Trace (TS: TransitionSystem) : Type
   | finite {n : ℕ} (trace : FiniteTrace TS n)
   | infinite (trace : InfiniteTrace TS)
 
-def TraceFromPathSegment {TS : TransitionSystem} (π: PathFragment TS) : Trace TS :=
-  match π with
-  | PathFragment.finite π => Trace.finite ⟨fun i ↦ TS.L (π.states i)⟩
-  | PathFragment.infinite π => Trace.infinite ⟨fun i ↦ TS.L (π.states i)⟩
+def FiniteTraceFromFinitePathFragment {TS : TransitionSystem} {n: ℕ} (π: FinitePathFragment TS n) : FiniteTrace TS n :=
+  fun i ↦ TS.L (π.states i)
 
-def TraceFromPathSegmentSet {TS : TransitionSystem} (P : Set (PathFragment TS)) : Set (Trace TS) :=
-  { trace | ∃ π ∈ P, trace = TraceFromPathSegment π }
+def InfiniteTraceFromInfinitePathFragment {TS : TransitionSystem} (π: InfinitePathFragment TS) : InfiniteTrace TS :=
+  fun i ↦ TS.L (π.states i)
+
+def TraceFromPathFragment {TS : TransitionSystem} (π: PathFragment TS) : Trace TS :=
+  match π with
+  | PathFragment.finite π => Trace.finite (FiniteTraceFromFinitePathFragment π)
+  | PathFragment.infinite π => Trace.infinite (InfiniteTraceFromInfinitePathFragment π)
+
+def TraceFromPathFragmentSet {TS : TransitionSystem} (P : Set (PathFragment TS)) : Set (Trace TS) :=
+  { trace | ∃ π ∈ P, trace = TraceFromPathFragment π }
 
 def TracesFromState {TS : TransitionSystem} (s: TS.S) : Set (Trace TS) :=
-  TraceFromPathSegmentSet (PathsFromState s)
+  TraceFromPathFragmentSet (PathsFromState s)
 
 def TracesFinFromState {TS : TransitionSystem} (s: TS.S) : Set (Trace TS) :=
-  TraceFromPathSegmentSet (PathsFinFromState s)
+  TraceFromPathFragmentSet (PathsFinFromState s)
 
 def Traces (TS: TransitionSystem) : Set (Trace TS) :=
   ⋃ s ∈ {s | TS.I s}, TracesFromState s
 
 def TracesFin (TS: TransitionSystem) : Set (Trace TS) :=
   ⋃ s ∈ {s | TS.I s}, TracesFinFromState s
+
+/-!
+We will specifically be interested in Transition Systems with no terminal states. We will define some structures and functions to make it easier to work with them.
+-/
+structure TransitionSystemWithoutTerminalStates where
+  TS: TransitionSystem
+  h: hasNoTerminalStates TS
+
+abbrev TransitionSystemWTS := TransitionSystemWithoutTerminalStates
+
+/-!
+Transition systems without terminal states have only infinite (paths and) traces. We can use this to simplify some definitions.
+-/
+def TracesFromPathsFromStateWTS (TSwts: TransitionSystemWTS) (s: TSwts.TS.S) (p: PathFragment TSwts.TS) (h₁: p ∈ PathsFromState s) : InfiniteTrace TSwts.TS := by
+  rw [PathsFromState] at h₁
+  rw [Set.mem_setOf] at h₁
+  obtain ⟨h₃, h₄⟩ := h₁
+  rw [maximalIffInfinitePathFragment TSwts.h] at h₃
+
+  match p with
+  | PathFragment.finite _ =>
+      unfold isInfinitePathFragment at h₃
+      simp at h₃
+  | PathFragment.infinite π =>
+      -- we can now construct the infinite trace
+      have t : InfiniteTrace TSwts.TS := InfiniteTraceFromInfinitePathFragment π
+      exact t
+
+def TracesFromStateWTS {TSwts: TransitionSystemWTS} (s: TSwts.TS.S) : Set (InfiniteTrace TSwts.TS) :=
+  { t | ∃ (p: PathFragment TSwts.TS) (h: p ∈ PathsFromState s), t = TracesFromPathsFromStateWTS TSwts s p h }
+
+def TracesWTS (TSwts: TransitionSystemWTS) : Set (InfiniteTrace TSwts.TS) :=
+  ⋃ s ∈ {s | TSwts.TS.I s}, TracesFromStateWTS s
 
 end TransitionSystem
