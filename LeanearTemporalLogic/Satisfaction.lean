@@ -19,12 +19,12 @@ infixl:70 (priority := high) " ≡ " => Equivalent.Equiv
 /-!
 A world is a sequence of states where each state is set of atomic propositions (that are considered true in that state).
 -/
-def World : Type := ℕ → Set AP
+def World (AP: Type) : Type := ℕ → Set AP
 
 /-!
 A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
 -/
-def suffix (σ : World) (i : ℕ) : World := fun j => σ (i + j)
+def suffix {AP: Type} (σ : World AP) (i : ℕ) : World AP := fun j => σ (i + j)
 
 syntax:60 term "[" term "…]" : term
 macro_rules
@@ -33,12 +33,12 @@ macro_rules
 /-!
 A simple lemma for composition of suffixes.
 -/
-theorem suffix_composition (σ : World) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
+theorem suffix_composition {AP: Type} (σ : World AP) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
   funext k
   unfold suffix
   rw [Nat.add_assoc]
 
-theorem suffix_zero_identity (σ : World) : σ[0…] = σ := by
+theorem suffix_zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
   funext k
   unfold suffix
   rw [Nat.zero_add]
@@ -49,7 +49,7 @@ Now we define what it means for a world to satisfy an LTL formula.
 section
 open LTLFormula
 
-def world_satisfies_ltl (σ : World) : LTLFormula → Prop
+def world_satisfies_ltl {AP: Type} (σ : World AP) : LTLFormula AP → Prop
   | ⊤ => true
   | LTLFormula.atom a => a ∈ σ 0
   | ¬ ψ => ¬ (world_satisfies_ltl σ ψ)
@@ -57,16 +57,23 @@ def world_satisfies_ltl (σ : World) : LTLFormula → Prop
   | ◯ ψ => world_satisfies_ltl (σ[1…]) ψ
   | ϕ₁ 𝓤 ϕ₂ => ∃ (j: ℕ), ((world_satisfies_ltl (σ[j…]) ϕ₂) ∧ ∀ (k: ℕ), (k < j → world_satisfies_ltl (σ[k…]) ϕ₁))
 
-instance : Satisfaction World LTLFormula := ⟨world_satisfies_ltl⟩
+instance {AP: Type} : Satisfaction (World AP) (LTLFormula AP) := ⟨world_satisfies_ltl⟩
+
+/-!
+We will also define satisfaction of an LTL formula by a single state, which is the same as satisfaction by a world with that state as the first state and all other states empty.
+-/
+instance {AP: Type} : Satisfaction (Set AP) (LTLFormula AP) := ⟨fun A ϕ => by
+  let f : World AP := fun n => if n = 0 then A else ∅
+  exact f ⊨ ϕ⟩
 
 /-!
 We will also define some useful lemmas for satisfaction.
 -/
-def world_satisfies_negation (σ : World) (ϕ : LTLFormula) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+def world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
   simp [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
-def world_satisfies_or (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
+def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
   simp [Satisfaction.Satisfies]
   repeat rw [world_satisfies_ltl]
   simp [Or.or, Not.not]
@@ -82,22 +89,22 @@ def world_satisfies_or (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ 
     simp
     assumption
 
-def world_satisfies_next (σ : World) (ϕ : LTLFormula) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
+def world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
   simp [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
-def world_satisfies_and (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+def world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
   simp [Satisfaction.Satisfies]
   repeat rw [world_satisfies_ltl]
 
-def world_satisfies_until (σ : World) (ϕ₁ ϕ₂ : LTLFormula) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
+def world_satisfies_until {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
   simp [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
 /-!
 We will now show satisfaction for ♢ and □ operators.
 -/
-theorem world_satisfies_eventually (σ : World) (ϕ : LTLFormula) : (σ ⊨ (♢ ϕ)) ↔ ∃ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
+theorem world_satisfies_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ ϕ)) ↔ ∃ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
   unfold eventually
   simp [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
@@ -119,7 +126,7 @@ theorem world_satisfies_eventually (σ : World) (ϕ : LTLFormula) : (σ ⊨ (♢
       intro hk
       rw [world_satisfies_ltl]
 
-theorem world_satisfies_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
+theorem world_satisfies_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
   unfold always
 
   constructor
@@ -153,7 +160,7 @@ theorem world_satisfies_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ϕ)
     simp [Satisfaction.Satisfies] at h
     apply h
 
-theorem world_satisfies_always_eventually (σ : World) (ϕ : LTLFormula) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
+theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
   constructor
 
   -- left to right
@@ -177,7 +184,7 @@ theorem world_satisfies_always_eventually (σ : World) (ϕ : LTLFormula) : (σ �
     rw [suffix_composition]
     assumption
 
-theorem world_satisfies_eventually_always (σ : World) (ϕ : LTLFormula) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
+theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
   constructor
 
   -- left to right
@@ -206,33 +213,26 @@ theorem world_satisfies_eventually_always (σ : World) (ϕ : LTLFormula) : (σ �
 /-!
 We now define the set of worlds that satisfy a given LTL formula.
 -/
-def Worlds (ϕ : LTLFormula) : Set World := fun σ => σ ⊨ ϕ
+def Worlds {AP: Type} (ϕ : LTLFormula AP) : Set (World AP) := fun σ => σ ⊨ ϕ
 
 /-!
 We will now define the notion of equivalence of LTL formulae.
 -/
-def equivalent_ltl (ϕ ψ : LTLFormula) : Prop := Worlds ϕ = Worlds ψ
-
-instance : Equivalent LTLFormula := ⟨equivalent_ltl⟩
+instance {AP: Type} : Equivalent (LTLFormula AP) := ⟨fun ϕ ψ => Worlds ϕ = Worlds ψ⟩
 
 /-!
 It will be useful to show that this is an equivalence relation.
 -/
-theorem equivalent_ltl_refl (ϕ : LTLFormula) : ϕ ≡ ϕ := by
+theorem equivalent_ltl_refl {AP: Type} (ϕ : LTLFormula AP) : ϕ ≡ ϕ := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
-  funext σ
-  simp [Worlds]
 
-theorem equivalent_ltl_symm (ϕ ψ : LTLFormula) : (ϕ ≡ ψ) → (ψ ≡ ϕ) := by
+theorem equivalent_ltl_symm {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ ϕ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   intro h
   rw [h]
 
-theorem equivalent_ltl_trans (ϕ ψ χ : LTLFormula) : (ϕ ≡ ψ) → (ψ ≡ χ) → (ϕ ≡ χ) := by
+theorem equivalent_ltl_trans {AP: Type} (ϕ ψ χ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ χ) → (ϕ ≡ χ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   intro h₁ h₂
   rw [h₁]
   exact h₂
@@ -240,9 +240,8 @@ theorem equivalent_ltl_trans (ϕ ψ χ : LTLFormula) : (ϕ ≡ ψ) → (ψ ≡ �
 /-!
 It would also be useful to show that equivalence is preserved by certain operations.
 -/
-theorem equivalent_ltl_preserves_negation (ϕ ψ : LTLFormula) : (ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ)) := by
+theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ)) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   constructor
   · intro h
     funext σ
@@ -276,9 +275,8 @@ theorem equivalent_ltl_preserves_negation (ϕ ψ : LTLFormula) : (ϕ ≡ ψ) ↔
       rw [← h₁]
       assumption
 
-theorem equivalent_ltl_preserves_always (ϕ ψ : LTLFormula) : (ϕ ≡ ψ) → ((□ ϕ) ≡ (□ ψ)) := by
+theorem equivalent_ltl_preserves_always {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → ((□ ϕ) ≡ (□ ψ)) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   intro h
   funext σ
   unfold Worlds
@@ -304,9 +302,8 @@ theorem equivalent_ltl_preserves_always (ϕ ψ : LTLFormula) : (ϕ ≡ ψ) → (
 Now we prove some equivalence rules for LTL formulae.
 -/
 
-theorem ltl_double_negation (ϕ : LTLFormula) : (¬ (¬ ϕ)) ≡ ϕ := by
+theorem ltl_double_negation {AP: Type} (ϕ : LTLFormula AP) : (¬ (¬ ϕ)) ≡ ϕ := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   constructor
@@ -322,9 +319,8 @@ theorem ltl_double_negation (ϕ : LTLFormula) : (¬ (¬ ϕ)) ≡ ϕ := by
     simp [Not.not]
     assumption
 
-theorem ltl_duality_next (ϕ : LTLFormula) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) := by
+theorem ltl_duality_next {AP: Type} (ϕ : LTLFormula AP) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   constructor
@@ -345,9 +341,8 @@ theorem ltl_duality_next (ϕ : LTLFormula) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) :
     rw [world_satisfies_ltl, world_satisfies_ltl]
     assumption
 
-theorem ltl_duality_eventually (ϕ : LTLFormula) : ((¬ (♢ ϕ)) ≡ (□ (¬ ϕ))) := by
+theorem ltl_duality_eventually {AP: Type} (ϕ : LTLFormula AP) : ((¬ (♢ ϕ)) ≡ (□ (¬ ϕ))) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   constructor
@@ -386,7 +381,7 @@ theorem ltl_duality_eventually (ϕ : LTLFormula) : ((¬ (♢ ϕ)) ≡ (□ (¬ �
     simp [Satisfaction.Satisfies] at h₁
     apply h₁
 
-theorem ltl_duality_always (ϕ : LTLFormula) : ((¬ (□ ϕ)) ≡ (♢ (¬ ϕ))) := by
+theorem ltl_duality_always {AP: Type} (ϕ : LTLFormula AP) : ((¬ (□ ϕ)) ≡ (♢ (¬ ϕ))) := by
   have h₀ : (¬ (♢ (¬ ϕ))) ≡ (□ (¬ (¬ ϕ))) := ltl_duality_eventually (¬ ϕ)
   have h₁ : (¬ (¬ ϕ)) ≡ ϕ := ltl_double_negation ϕ
   have h₂ : (□ (¬ (¬ ϕ))) ≡ (□ ϕ) := equivalent_ltl_preserves_always _ _ h₁
@@ -398,9 +393,8 @@ theorem ltl_duality_always (ϕ : LTLFormula) : ((¬ (□ ϕ)) ≡ (♢ (¬ ϕ)))
   have h₆ : (¬ (□ ϕ)) ≡ (♢ (¬ ϕ)) := equivalent_ltl_trans _ _ _ h₄ h₅
   assumption
 
-theorem ltl_idempotence_eventually (ϕ : LTLFormula) : (♢ (♢ ϕ)) ≡ (♢ ϕ) := by
+theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ ϕ)) ≡ (♢ ϕ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   rw [world_satisfies_eventually, world_satisfies_eventually]
@@ -421,9 +415,8 @@ theorem ltl_idempotence_eventually (ϕ : LTLFormula) : (♢ (♢ ϕ)) ≡ (♢ �
     ring_nf
     assumption
 
-theorem ltl_idempotence_always (ϕ : LTLFormula) : (□ (□ ϕ)) ≡ (□ ϕ) := by
+theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) ≡ (□ ϕ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   rw [world_satisfies_always, world_satisfies_always]
@@ -443,9 +436,8 @@ theorem ltl_idempotence_always (ϕ : LTLFormula) : (□ (□ ϕ)) ≡ (□ ϕ) :
     specialize h (i + j)
     assumption
 
-theorem ltl_idempotence_until_left (ϕ ψ : LTLFormula) : ((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ) := by
+theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   simp [Satisfaction.Satisfies]
@@ -496,9 +488,8 @@ theorem ltl_idempotence_until_left (ϕ ψ : LTLFormula) : ((ϕ 𝓤 ϕ) 𝓤 ψ)
         intro hk'
         simp at hk'
 
-theorem ltl_idempotence_until_right (ϕ ψ : LTLFormula) : (ϕ 𝓤 (ψ 𝓤 ψ)) ≡ (ϕ 𝓤 ψ) := by
+theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 (ψ 𝓤 ψ)) ≡ (ϕ 𝓤 ψ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   simp [Satisfaction.Satisfies]
@@ -546,9 +537,8 @@ theorem ltl_idempotence_until_right (ϕ ψ : LTLFormula) : (ϕ 𝓤 (ψ 𝓤 ψ)
         simp at hk
     · assumption
 
-theorem ltl_absorption_always_eventually (ϕ : LTLFormula) : (♢ □ ♢ ϕ) ≡ (□ ♢ ϕ) := by
+theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ □ ♢ ϕ) ≡ (□ ♢ ϕ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   rw [world_satisfies_eventually]
@@ -570,9 +560,8 @@ theorem ltl_absorption_always_eventually (ϕ : LTLFormula) : (♢ □ ♢ ϕ) �
     rw [suffix_zero_identity]
     assumption
 
-theorem ltl_absorption_eventually_always (ϕ : LTLFormula) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
+theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
   simp [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp [Worlds]
   rw [world_satisfies_always]
@@ -594,9 +583,8 @@ theorem ltl_absorption_eventually_always (ϕ : LTLFormula) : (□ ♢ □ ϕ) �
     rw [← Nat.add_assoc, Nat.add_comm i' i] at hi
     assumption
 
-theorem ltl_expansion_until (ϕ ψ : LTLFormula) : (ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ)))) := by
+theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ)))) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_or]
@@ -674,9 +662,8 @@ theorem ltl_expansion_until (ϕ ψ : LTLFormula) : (ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ 
             rw [Nat.add_comm]
             assumption
 
-theorem ltl_expansion_eventually (ϕ : LTLFormula) : (♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ))) := by
+theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ))) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_or]
@@ -715,9 +702,8 @@ theorem ltl_expansion_eventually (ϕ : LTLFormula) : (♢ ϕ) ≡ (ϕ ∨ (◯ (
       rw [suffix_composition, Nat.add_comm] at hj
       assumption
 
-theorem ltl_expansion_always (ϕ : LTLFormula) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ))) := by
+theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ))) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_and]
@@ -746,9 +732,8 @@ theorem ltl_expansion_always (ϕ : LTLFormula) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ 
       rw [suffix_composition, Nat.add_comm] at hr
       assumption
 
-theorem ltl_distributive_next_until (ϕ ψ : LTLFormula) : (◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ)) := by
+theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ)) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_next]
@@ -792,9 +777,8 @@ theorem ltl_distributive_next_until (ϕ ψ : LTLFormula) : (◯ (ϕ 𝓤 ψ)) �
       rw [Nat.add_comm]
       assumption
 
-theorem ltl_distributive_eventually_or (ϕ ψ : LTLFormula) : (♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ)) := by
+theorem ltl_distributive_eventually_or {AP: Type} (ϕ ψ : LTLFormula AP) : (♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ)) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_eventually]
@@ -829,9 +813,8 @@ theorem ltl_distributive_eventually_or (ϕ ψ : LTLFormula) : (♢ (ϕ ∨ ψ)) 
       right
       assumption
 
-theorem ltl_distributive_always_and (ϕ ψ : LTLFormula) : (□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ)) := by
+theorem ltl_distributive_always_and {AP: Type} (ϕ ψ : LTLFormula AP) : (□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ)) := by
   simp only [Equivalent.Equiv]
-  unfold equivalent_ltl
   funext σ
   simp only [Worlds]
   rw [world_satisfies_always]
@@ -866,9 +849,9 @@ theorem ltl_distributive_always_and (ϕ ψ : LTLFormula) : (□ (ϕ ∧ ψ)) ≡
 /-!
 Now we prove the lemma that "Until is the Least Solution of the Expansion Law"
 -/
-def solution_of_expansion_law (ϕ ψ : LTLFormula) (P : Set World) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
+def solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
 
-theorem until_least_solution_of_expansion_law (ϕ ψ : LTLFormula) : (solution_of_expansion_law ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
+theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
   unfold solution_of_expansion_law
   unfold Worlds
   simp
@@ -972,6 +955,38 @@ theorem until_least_solution_of_expansion_law (ϕ ψ : LTLFormula) : (solution_o
     rw [suffix_zero_identity] at h₀
     assumption
 
+/-!
+We will now use the satisfaction of LTL formulae to define satisfaction of PL formulae.
+-/
+instance {AP: Type} : Satisfaction (Set AP) (PLFormula AP) := ⟨fun A Φ ↦ A ⊨ Φ.formula⟩
+
+/-!
+We will also define some useful lemmas for satisfaction of PL formulae.
+-/
+def set_satisfies_negation {AP: Type} (σ : Set AP) (ϕ : PLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+  simp [Satisfaction.Satisfies]
+  rw [world_satisfies_ltl]
+
+def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
+  simp [Satisfaction.Satisfies]
+  repeat rw [world_satisfies_ltl]
+  simp [Or.or, Not.not]
+  constructor
+  · intro h
+    contrapose h
+    simp at h
+    simp
+    assumption
+  · intro h
+    contrapose h
+    simp at h
+    simp
+    assumption
+
+def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+  simp [Satisfaction.Satisfies]
+  repeat rw [world_satisfies_ltl]
+
 end section
 
 section
@@ -1040,5 +1055,11 @@ theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transi
       rw [iff_def'] at h
       obtain ⟨h₁, h₂⟩ := h
       apply h₂
+
+/-!
+We will now define some special kinds of LT properties, starting with **Invariants**.
+-/
+
+def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
 
 end section
