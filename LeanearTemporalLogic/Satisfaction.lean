@@ -984,28 +984,15 @@ open TransitionSystem
 /-!
 We will define a satisfaction relation between transition systems and LT properties. For this, both must be defined over the same set of atomic propositions. Note that we specifically deal with Transition Systems without terminal states.
 -/
+instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := ⟨fun TSwts P ↦ TracesWTS TSwts ⊆ P⟩
 
--- we will need membership of an InfiniteTrace in an LTProperty
-instance {TS : TransitionSystem} : Membership (InfiniteTrace TS) (LTProperty TS.AP) := ⟨fun P T ↦ by
-  rw [LTProperty] at P
-  rw [InfiniteTrace] at T
-  apply T ∈ P⟩
-
-def transitionSystem_satifies_LTProperty (TSwts: TransitionSystemWTS) (P: LTProperty TSwts.TS.AP) : Prop :=
-  TracesWTS TSwts ⊆ P
-
-instance {TSwts: TransitionSystemWTS} : Satisfaction (TransitionSystemWTS) (LTProperty TSwts.TS.AP) := ⟨fun _σ P ↦ transitionSystem_satifies_LTProperty TSwts P⟩
-
-def state_satisfies_LTProperty {TSwts: TransitionSystemWithoutTerminalStates} (s: TSwts.TS.S) (P: LTProperty TSwts.TS.AP) : Prop :=
-  TracesFromStateWTS s ⊆ P
-
-instance {TSwts: TransitionSystemWTS} : Satisfaction (TSwts.TS.S) (LTProperty TSwts.TS.AP) := ⟨state_satisfies_LTProperty⟩
+instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.TS.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
 /-!
 We now prove a theorem about **Trace Inclusion and LT Properties**.
 -/
 -- TODO
-theorem trace_inclusion_and_LTProperties : False := by
-  sorry
+-- theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS) (h: TSwts₁.TS.AP = TSwts₂.TS.AP) : (TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂) ↔ ∀ (P: LTProperty TSwts₁.TS.AP), TSwts₂ ⊨ P → TSwts₁ ⊨ P := by
+--   sorry
 
 end section
