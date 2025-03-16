@@ -1,6 +1,7 @@
 import Mathlib
 import LeanearTemporalLogic.LTL
 import LeanearTemporalLogic.TransitionSystems
+import LeanearTemporalLogic.LTProperty
 
 /-!
 We will define a satisfaction relation as a type class. This will allow us to define satisfaction for different types of models.
@@ -973,12 +974,6 @@ theorem until_least_solution_of_expansion_law (ϕ ψ : LTLFormula) : (solution_o
 
 end section
 
-
-/-!
-Now we define **Linear Time Properties**, or LT properties, over a set of atomic propositions.
--/
-def LTProperty (AP: Type) := Set (ℕ → (Set AP))
-
 section
 open TransitionSystem
 /-!
@@ -991,8 +986,59 @@ instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.TS.S) 
 /-!
 We now prove a theorem about **Trace Inclusion and LT Properties**.
 -/
--- TODO
--- theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS) (h: TSwts₁.TS.AP = TSwts₂.TS.AP) : (TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂) ↔ ∀ (P: LTProperty TSwts₁.TS.AP), TSwts₂ ⊨ P → TSwts₁ ⊨ P := by
---   sorry
+theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : (TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂) ↔ ∀ (P: LTProperty AP), TSwts₂ ⊨ P → TSwts₁ ⊨ P := by
+  simp [Satisfaction.Satisfies]
+  constructor
+  · intro h
+    intro P
+    intro h'
+    rw [Set.subset_def]
+    rw [Set.subset_def] at h
+    rw [Set.subset_def] at h'
+    intro σ
+    intro h''
+    specialize h σ
+    apply h at h''
+    specialize h' σ h''
+    assumption
+  · intro h
+    specialize h (TracesWTS TSwts₂)
+    simp at h
+    assumption
+
+
+/-!
+We will define the notion of trace equivalence between two transition systems, and then show a corollary of the previous theorem about **Trace Equivalence and LT Properties**.
+-/
+def trace_equivalence {AP: Type} (TS₁ TS₂: TransitionSystem AP) : Prop := Traces TS₁ = Traces TS₂
+
+def trace_equivalence_wts {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : Prop := TracesWTS TSwts₁ = TracesWTS TSwts₂
+
+theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : (trace_equivalence_wts TSwts₁ TSwts₂) ↔ ∀ (P: LTProperty AP), TSwts₁ ⊨ P ↔ TSwts₂ ⊨ P := by
+  rw [trace_equivalence_wts]
+  constructor
+  · intro h
+    have h₀ : TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂ := by rw [h]
+    rw [trace_inclusion_and_LTProperties] at h₀
+    have h₁ : TracesWTS TSwts₂ ⊆ TracesWTS TSwts₁ := by rw [h]
+    rw [trace_inclusion_and_LTProperties] at h₁
+    intro P
+    constructor
+    · apply h₁
+    · apply h₀
+  · intro h
+    rw [Set.Subset.antisymm_iff]
+    rw [trace_inclusion_and_LTProperties, trace_inclusion_and_LTProperties]
+    constructor
+    · intro P
+      specialize h P
+      rw [iff_def'] at h
+      obtain ⟨h₁, h₂⟩ := h
+      apply h₁
+    · intro P
+      specialize h P
+      rw [iff_def'] at h
+      obtain ⟨h₁, h₂⟩ := h
+      apply h₂
 
 end section

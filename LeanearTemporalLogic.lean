@@ -3,3 +3,4 @@
 import «LeanearTemporalLogic».LTL
 import «LeanearTemporalLogic».Satisfaction
 import «LeanearTemporalLogic».TransitionSystems
+import «LeanearTemporalLogic».LTProperty
