@@ -1122,7 +1122,6 @@ We will now define some special kinds of LT properties, starting with **Invarian
 def isInvariantWithFormula {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
 def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithFormula P ϕ
 
-
 theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithFormula P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
@@ -1260,21 +1259,72 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         specialize h' n
 
         have hs : (@TraceFromPathWTS AP ⟨TS, hTS⟩ π hπ) n = TS.L s := by
-          unfold π TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
-          simp only [TraceFromPathWTS.proof_2]
-          sorry
+          unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
+          unfold Paths isPath at hπ
+          simp at hπ
+          obtain ⟨hπl, hπr⟩ := hπ
+          rw [maximalIffInfinitePathFragment hTS'] at hπr
+          simp
+          match c: π with
+          | @PathFragment.finite AP TS n p =>
+            simp
+            contradiction
+          | PathFragment.infinite p =>
+            simp
+            unfold endStateExecutionFragment at her
+            unfold π at c
+            simp at c
+            rw [← c]
+            simp
+            rw [headState0]
 
         rw [hs] at h'
         assumption
-  · intro h
+  · intro h'
     intro π
     intro hπ
+    simp at π
     simp at hπ
-    rw [hϕ, Set.mem_def]
-    rw [Set.setOf_app_iff]
-    intro n
-    obtain ⟨Φ, hΦ⟩ := h
+    obtain ⟨Φ, hΦ⟩ := h'
     obtain ⟨hΦl, hΦr⟩ := hΦ
-    sorry
+    unfold isInvariantWithFormula at hΦl
+    simp at hΦr
+    rw [hΦl, Set.mem_def, Set.setOf_app_iff]
+    intro n
+    unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
+    cases π with
+    | @finite _ _ =>
+      unfold Paths isPath at hπ
+      simp at hπ
+      obtain ⟨hπl, hπr⟩ := hπ
+      simp
+      contradiction
+    | infinite p =>
+      simp
+      have hreach : p.states n ∈ Reach TS := by
+        unfold Reach isReachableState
+        simp
+        use n
+        let eInf := infinitePathFragmentToInfiniteExecutionFragment p
+        let e : FiniteExecutionFragment TS n := ⟨fun i => eInf.states i, fun i => eInf.actions i, by
+          intro i
+          simp
+          exact eInf.valid i⟩
+        use e
+        constructor
+        · unfold isInitialExecutionFragment startStateExecutionFragment
+          simp
+          unfold Paths isPath at hπ
+          simp at hπ
+          obtain ⟨hπl, hπr⟩ := hπ
+          unfold isInitialPathFragment startStatePathFragment at hπl
+          simp at hπl
+          unfold e eInf infinitePathFragmentToInfiniteExecutionFragment
+          simp
+          assumption
+        · unfold endStateExecutionFragment e eInf infinitePathFragmentToInfiniteExecutionFragment
+          simp
+      specialize hΦr (p.states n) hreach
+      assumption
 
 end section

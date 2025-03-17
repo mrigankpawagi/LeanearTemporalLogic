@@ -212,6 +212,44 @@ def executionFragmentToPathFragment {AP: Type} {TS : TransitionSystem AP} (e: Ex
   | ExecutionFragment.finite e => PathFragment.finite (finiteExecutionFragmentToFinitePathFragment e)
   | ExecutionFragment.infinite e => PathFragment.infinite (infiniteExecutionFragmentToInfinitePathFragment e)
 
+noncomputable def finitePathFragmentToFiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} {n: ℕ} (π: FinitePathFragment TS n) : FiniteExecutionFragment TS n := ⟨π.states,
+  fun i => by
+    have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
+    unfold Post PostAction at h
+    simp at h
+    let α: TS.Act := Exists.choose h
+    let hα := Exists.choose_spec h
+    exact α,
+  by
+    intro i
+    have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
+    unfold Post PostAction at h
+    simp at h
+    let hα := Exists.choose_spec h
+    simp
+    exact hα⟩
+
+noncomputable def infinitePathFragmentToInfiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} (π: InfinitePathFragment TS) : InfiniteExecutionFragment TS := ⟨π.states,
+  fun i => by
+    have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
+    unfold Post PostAction at h
+    simp at h
+    let α: TS.Act := Exists.choose h
+    let hα := Exists.choose_spec h
+    exact α,
+  by
+    intro i
+    have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
+    unfold Post PostAction at h
+    simp at h
+    let hα := Exists.choose_spec h
+    simp
+    exact hα⟩
+
+noncomputable def pathFragmentToExecutionFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : ExecutionFragment TS :=
+  match π with
+  | PathFragment.finite π => ExecutionFragment.finite (finitePathFragmentToFiniteExecutionFragment π)
+  | PathFragment.infinite π => ExecutionFragment.infinite (infinitePathFragmentToInfiniteExecutionFragment π)
 
 /-!
 A *maximal* path fragment is either finite and ending in a terminal state, or infinite.
@@ -371,18 +409,16 @@ abbrev TransitionSystemWTS := TransitionSystemWithoutTerminalStates
 /-!
 Transition systems without terminal states have only infinite (paths and) traces. We can use this to simplify some definitions.
 -/
-def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragment TSwts.TS) (h: π ∈ Paths TSwts.TS) : InfiniteTrace AP := by
-  rw [Paths, Set.mem_setOf, isPath] at h
-  obtain ⟨_, h₂⟩ := h
-  rw [maximalIffInfinitePathFragment TSwts.h] at h₂
+def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragment TSwts.TS) (h: π ∈ Paths TSwts.TS) : InfiniteTrace AP :=
   match π with
   | PathFragment.finite _ =>
-      unfold isInfinitePathFragment at h₂
-      simp at h₂
-  | PathFragment.infinite π' =>
-      -- we can now construct the infinite trace
-      have t : InfiniteTrace AP := InfiniteTraceFromInfinitePathFragment π'
-      exact t
+      False.elim (by
+        rw [Paths, Set.mem_setOf, isPath] at h
+        obtain ⟨_, h₂⟩ := h
+        rw [maximalIffInfinitePathFragment TSwts.h] at h₂
+        unfold isInfinitePathFragment at h₂
+        simp at h₂)
+  | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
 def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP := by
   rw [PathsFromState, Set.mem_setOf] at h
