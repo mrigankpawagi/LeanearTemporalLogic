@@ -998,6 +998,66 @@ instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := �
 
 instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.TS.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
+-- We need to define membership of an Infinite Trace in an LT Property
+instance {AP: Type} : Membership (InfiniteTrace AP) (LTProperty AP) := ⟨fun P π ↦ by
+  rw [LTProperty] at P
+  rw [InfiniteTrace] at π
+  exact π ∈ P⟩
+
+/-!
+Some auxiliary lemmas about satisfaction of LT properties.
+-/
+theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) : TSwts ⊨ P ↔ ∀ π, (h: π ∈ Paths TSwts.TS) → TraceFromPathWTS π h ∈ P := by
+  simp [Satisfaction.Satisfies]
+  rw [TracesWTS]
+  simp
+  constructor
+  · intro h
+    intro π
+    intro h'
+    rw [Paths] at h'
+    simp at h'
+    rw [isPath] at h'
+    obtain ⟨hinit, hmax⟩ := h'
+    rw [isInitialPathFragment] at hinit
+    specialize h (startStatePathFragment π)
+    apply h at hinit
+    rw [TracesFromInitialStateWTS] at hinit
+    rw [Set.setOf_subset] at hinit
+    specialize hinit (TraceFromPathWTS π h')
+    apply hinit
+    use π
+    use path_starts_from_startState π h'
+    unfold TraceFromPathFromInitialStateWTS
+    simp
+  · intro h
+    intro s
+    intro h'
+    unfold TracesFromInitialStateWTS
+    rw [Set.setOf_subset]
+    intro trace
+    intro h''
+    obtain ⟨π, hπ⟩ := h''
+    obtain ⟨hπ', hπ''⟩ := hπ
+    specialize h π
+    have h₀: π ∈ Paths TSwts.TS := by
+      rw [Paths]
+      rw [PathsFromState] at hπ'
+      simp at hπ'
+      simp
+      unfold isPath
+      obtain ⟨hl, hr⟩ := hπ'
+      constructor
+      · unfold isInitialPathFragment
+        rw [hr]
+        assumption
+      · assumption
+    apply h at h₀
+    rw [TraceFromPathFromInitialStateWTS] at hπ''
+    rw [← hπ''] at h₀
+    assumption
+
+
 /-!
 We now prove a theorem about **Trace Inclusion and LT Properties**.
 -/
@@ -1059,7 +1119,162 @@ theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transi
 /-!
 We will now define some special kinds of LT properties, starting with **Invariants**.
 -/
+def isInvariantWithFormula {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
+def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithFormula P ϕ
 
-def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
+
+theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithFormula P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
+  rw [ltproperty_satisfaction_allPaths]
+  rw [isInvariant] at h
+  obtain ⟨ϕ, hϕ⟩ := h
+  unfold isInvariantWithFormula at hϕ
+  obtain ⟨TS, hTS⟩ := TSwts
+  let hTS' := hTS
+  rw [hasNoTerminalStates] at hTS
+  constructor
+  · intro h'
+    use ϕ
+    constructor
+    · assumption
+    · intro s
+      intro hs
+      rw [Reach] at hs
+      simp at hs
+      unfold isReachableState at hs
+      obtain ⟨n, e, he⟩ := hs
+      obtain ⟨hel, her⟩ := he
+      let πtail : FinitePathFragment TS n := finiteExecutionFragmentToFinitePathFragment e
+      have htail : πtail.states = e.states := by
+        unfold πtail finiteExecutionFragmentToFinitePathFragment
+        simp
+      obtain ⟨tailStates, tailValid⟩ := πtail
+      simp at htail
+      have hhead : ∃ π', π' ∈ PathsFromState s := path_originates_from_state_if_noTerminalState hTS s
+      obtain ⟨πhead, hπhead⟩ := hhead
+      simp
+      simp at πhead
+      simp at h'
+      simp at s
+      cases c: πhead with
+      | @finite n p =>
+        rw [c] at hπhead
+        unfold PathsFromState at hπhead
+        simp at hπhead
+        obtain ⟨hπheadmax, _⟩ := hπhead
+        unfold isMaximalPathFragment endStatePathFragment at hπheadmax
+        simp at hπheadmax
+        specialize hTS (p.states (Fin.last n))
+        contradiction
+      | infinite p =>
+        rw [c] at hπhead
+        obtain ⟨headStates, headValid⟩ := p
+
+        unfold PathsFromState startStatePathFragment at hπhead
+        simp at hπhead
+        obtain ⟨_, headState0⟩ := hπhead
+
+        -- combine πtail and πhead to form a path
+        let π := PathFragment.infinite (⟨fun i => if i < n then tailStates i else headStates (i - n),
+          by
+            intro i
+            simp
+            if h : i < n then
+              let v := tailValid (Fin.mk i h)
+              simp at v
+              simp [h]
+              if h': i + 1 < n then
+                simp [h']
+                exact v
+              else
+                simp at h'
+                rw [Nat.lt_iff_add_one_le] at h
+                have p : i + 1 = n := by apply Nat.le_antisymm <;> assumption
+                rw [p]
+                simp
+                rw [headState0]
+                if hn: n = 0 then
+                  rw [hn] at p
+                  simp at p
+                else
+                  have hnsucc : ∃ m, n = m + 1 := by
+                    apply Nat.exists_eq_succ_of_ne_zero
+                    assumption
+                  obtain ⟨m, hm⟩ := hnsucc
+                  rw [hm] at p
+                  simp at p
+                  rw [p]
+                  let v := tailValid (Fin.mk m (by rw [hm]; simp))
+                  simp at v
+                  have hv : tailStates (m + 1) = s := by
+                    rw [htail]
+                    unfold endStateExecutionFragment at her
+                    rw [← Fin.natCast_eq_last] at her
+                    rw [← her]
+                    simp [hm]
+                  rw [← hv]
+                  exact v
+            else
+              simp [h]
+              simp at h
+              have h' : ¬ (i + 1 < n) := by
+                simp only [LTLFormula.Not.not]
+                contrapose h
+                simp at h
+                rw [Nat.not_le]
+                have hii : i < i + 1 := by simp
+                apply Nat.lt_trans hii h
+              simp only [LTLFormula.Not.not] at h'
+              simp [h']
+              let v : headStates (i - n + 1) ∈ Post (headStates (i - n)) := headValid (i - n)
+              rw [Nat.sub_add_comm h]
+              exact v
+            ⟩: InfinitePathFragment TS)
+
+        have hπ : π ∈ Paths TS := by
+          unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment
+          simp
+          constructor
+          · unfold startStatePathFragment π
+            simp
+            unfold isInitialExecutionFragment startStateExecutionFragment at hel
+            simp at hel
+            cases n with
+            | zero =>
+              simp
+              rw [headState0]
+              unfold endStateExecutionFragment at her
+              rw [← Fin.natCast_eq_last] at her
+              rw [← her]
+              simp [hel]
+            | succ m =>
+              simp
+              rw [htail]
+              assumption
+          · unfold π
+            simp
+
+        specialize h' π hπ
+        rw [hϕ] at h'
+        rw [Set.mem_def] at h'
+        rw [Set.setOf_app_iff] at h'
+        specialize h' n
+
+        have hs : (@TraceFromPathWTS AP ⟨TS, hTS⟩ π hπ) n = TS.L s := by
+          unfold π TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
+          simp only [TraceFromPathWTS.proof_2]
+          sorry
+
+        rw [hs] at h'
+        assumption
+  · intro h
+    intro π
+    intro hπ
+    simp at hπ
+    rw [hϕ, Set.mem_def]
+    rw [Set.setOf_app_iff]
+    intro n
+    obtain ⟨Φ, hΦ⟩ := h
+    obtain ⟨hΦl, hΦr⟩ := hΦ
+    sorry
 
 end section
