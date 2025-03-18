@@ -24,24 +24,31 @@ def World (AP: Type) : Type := ℕ → Set AP
 /-!
 A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
 -/
-def suffix {AP: Type} (σ : World AP) (i : ℕ) : World AP := fun j => σ (i + j)
+def Suffix {AP: Type} (σ : World AP) (i : ℕ) : World AP := fun j => σ (i + j)
 
 syntax:60 term "[" term "…]" : term
 macro_rules
-  | `($σ[$i…]) => `(suffix $σ $i)
+  | `($σ[$i…]) => `(Suffix $σ $i)
 
 /-!
 A simple lemma for composition of suffixes.
 -/
-theorem suffix_composition {AP: Type} (σ : World AP) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
+theorem Suffix.composition {AP: Type} (σ : World AP) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
   funext k
-  unfold suffix
+  unfold Suffix
   rw [Nat.add_assoc]
 
-theorem suffix_zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
+theorem Suffix.zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
   funext k
-  unfold suffix
+  unfold Suffix
   rw [Nat.zero_add]
+
+/-!
+We will also need prefixes of worlds. Note that prefixes are finite.
+-/
+def Prefix {AP: Type} (σ : World AP) (n: ℕ) : Fin n → Set AP := fun i => σ i
+
+def PrefixOfPrefix {AP: Type} {n : ℕ} (σ : Fin n → Set AP) (m : ℕ) (h: m ≤ n) : Fin m → Set AP := fun i => σ (Fin.castLE h i)
 
 /-!
 Now we define what it means for a world to satisfy an LTL formula.
@@ -170,7 +177,7 @@ theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFo
     specialize h i
     rw [world_satisfies_eventually] at h
     obtain ⟨j, hj⟩ := h
-    rw [suffix_composition] at hj
+    rw [Suffix.composition] at hj
     use j
 
   -- right to left
@@ -181,7 +188,7 @@ theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFo
     specialize h i
     obtain ⟨j, hj⟩ := h
     use j
-    rw [suffix_composition]
+    rw [Suffix.composition]
     assumption
 
 theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
@@ -195,7 +202,7 @@ theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFo
     intro j
     rw [world_satisfies_always] at hi
     specialize hi j
-    rw [suffix_composition] at hi
+    rw [Suffix.composition] at hi
     assumption
 
   -- right to left
@@ -206,7 +213,7 @@ theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFo
     rw [world_satisfies_always]
     intro j
     specialize hi j
-    rw [suffix_composition]
+    rw [Suffix.composition]
     assumption
 
 
@@ -404,14 +411,14 @@ theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ �
     rw [world_satisfies_eventually] at hi
     obtain ⟨j, hj⟩ := hi
     use i + j
-    rw [suffix_composition] at hj
+    rw [Suffix.composition] at hj
     assumption
   · intro h
     obtain ⟨i, hi⟩ := h
     use 0
     rw [world_satisfies_eventually]
     use i
-    rw [suffix_composition]
+    rw [Suffix.composition]
     ring_nf
     assumption
 
@@ -426,13 +433,13 @@ theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) 
     specialize h i
     rw [world_satisfies_always] at h
     specialize h 0
-    rw [suffix_composition] at h
+    rw [Suffix.composition] at h
     assumption
   · intro h
     intro i
     rw [world_satisfies_always]
     intro j
-    rw [suffix_composition]
+    rw [Suffix.composition]
     specialize h (i + j)
     assumption
 
@@ -455,7 +462,7 @@ theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ �
       rw [world_satisfies_ltl] at hk'
       obtain ⟨k', hk''⟩ := hk'
       obtain ⟨hkl, hkr⟩ := hk''
-      rw [suffix_composition] at hkl
+      rw [Suffix.composition] at hkl
       specialize hkr 0
       cases c: k' with
       | zero =>
@@ -467,7 +474,7 @@ theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ �
           rw [c]
           apply Nat.zero_lt_succ
         specialize hkr p
-        rw [suffix_composition] at hkr
+        rw [Suffix.composition] at hkr
         rw [Nat.add_zero] at hkr
         assumption
   · intro h
@@ -480,7 +487,7 @@ theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ �
       intro hk
       rw [world_satisfies_ltl]
       use 0
-      rw [suffix_composition, Nat.add_zero]
+      rw [Suffix.composition, Nat.add_zero]
       specialize hr k hk
       constructor
       · assumption
@@ -502,7 +509,7 @@ theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ �
     rw [world_satisfies_ltl] at hl
     obtain ⟨j', hj'⟩ := hl
     obtain ⟨hjl, hjr⟩ := hj'
-    rw [suffix_composition] at hjl
+    rw [Suffix.composition] at hjl
     specialize hjr 0
     cases c: j' with
     | zero =>
@@ -516,7 +523,7 @@ theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ �
         rw [c]
         apply Nat.zero_lt_succ
       specialize hjr p
-      rw [suffix_composition] at hjr
+      rw [Suffix.composition] at hjr
       rw [Nat.add_zero] at hjr
       constructor
       · assumption
@@ -529,7 +536,7 @@ theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ �
     constructor
     · rw [world_satisfies_ltl]
       use 0
-      rw [suffix_composition, Nat.add_zero]
+      rw [Suffix.composition, Nat.add_zero]
       constructor
       · assumption
       · intro k
@@ -551,13 +558,13 @@ theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ 
     specialize hi i'
     obtain ⟨j, hj⟩ := hi
     use i + j
-    rw [suffix_composition] at hj
+    rw [Suffix.composition] at hj
     rw [← Nat.add_assoc, Nat.add_comm i' i]
     rw [← Nat.add_assoc] at hj
     assumption
   · intro h
     use 0
-    rw [suffix_zero_identity]
+    rw [Suffix.zero_identity]
     assumption
 
 theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
@@ -568,7 +575,7 @@ theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ 
   constructor
   · intro h
     specialize h 0
-    rw [suffix_zero_identity] at h
+    rw [Suffix.zero_identity] at h
     assumption
   · intro h
     intro i
@@ -578,7 +585,7 @@ theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ 
     use i'
     intro j
     specialize hi (i + j)
-    rw [suffix_composition]
+    rw [Suffix.composition]
     rw [← Nat.add_assoc]
     rw [← Nat.add_assoc, Nat.add_comm i' i] at hi
     assumption
@@ -598,7 +605,7 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
     cases c: j with
     | zero =>
       rw [c] at hl
-      rw [suffix_zero_identity] at hl
+      rw [Suffix.zero_identity] at hl
       left
       assumption
     | succ n =>
@@ -607,19 +614,19 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
         rw [c]
         apply Nat.zero_lt_succ
       have hr' := hr 0 p
-      rw [suffix_zero_identity] at hr'
+      rw [Suffix.zero_identity] at hr'
       constructor
       · assumption
       · repeat rw [world_satisfies_ltl]
         use n
-        rw [suffix_composition]
+        rw [Suffix.composition]
         rw [c] at hl
         rw [Nat.add_comm]
         constructor
         · assumption
         · intro k
           intro hk
-          rw [suffix_composition]
+          rw [Suffix.composition]
           have p' : k + 1 < j := by
             rw [c]
             have p'' : k + 1 < n + 1 := by
@@ -634,7 +641,7 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
     cases h with
     | inl hl =>
         use 0
-        rw [suffix_zero_identity]
+        rw [Suffix.zero_identity]
         constructor
         · assumption
         · simp
@@ -644,7 +651,7 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
         repeat rw [world_satisfies_ltl] at hrr
         obtain ⟨j, hj⟩ := hrr
         use j + 1
-        rw [suffix_composition, Nat.add_comm] at hj
+        rw [Suffix.composition, Nat.add_comm] at hj
         obtain ⟨hjl, hjr⟩ := hj
         constructor
         · assumption
@@ -652,13 +659,13 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
           intro hk
           cases c: k with
           | zero =>
-            rw [suffix_zero_identity]
+            rw [Suffix.zero_identity]
             assumption
           | succ n =>
             rw [c] at hk
             rw [Nat.succ_lt_succ_iff] at hk
             specialize hjr n hk
-            rw [suffix_composition] at hjr
+            rw [Suffix.composition] at hjr
             rw [Nat.add_comm]
             assumption
 
@@ -675,7 +682,7 @@ theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ 
     cases c: i with
     | zero =>
       rw [c] at hi
-      rw [suffix_zero_identity] at hi
+      rw [Suffix.zero_identity] at hi
       left
       assumption
     | succ n =>
@@ -683,7 +690,7 @@ theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ 
       rw [world_satisfies_next]
       rw [world_satisfies_eventually]
       use n
-      rw [suffix_composition]
+      rw [Suffix.composition]
       rw [c] at hi
       rw [Nat.add_comm]
       assumption
@@ -692,14 +699,14 @@ theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ 
     cases h with
     | inl hl =>
       use 0
-      rw [suffix_zero_identity]
+      rw [Suffix.zero_identity]
       assumption
     | inr hr =>
       rw [world_satisfies_next] at hr
       rw [world_satisfies_eventually] at hr
       obtain ⟨j, hj⟩ := hr
       use j + 1
-      rw [suffix_composition, Nat.add_comm] at hj
+      rw [Suffix.composition, Nat.add_comm] at hj
       assumption
 
 theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ))) := by
@@ -714,22 +721,22 @@ theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ 
   · intro h
     constructor
     · specialize h 0
-      rw [suffix_zero_identity] at h
+      rw [Suffix.zero_identity] at h
       assumption
     · intro i
       specialize h (i + 1)
-      rw [suffix_composition, Nat.add_comm]
+      rw [Suffix.composition, Nat.add_comm]
       assumption
   · intro h
     intro i
     obtain ⟨hl, hr⟩ := h
     cases c: i with
     | zero =>
-      rw [suffix_zero_identity]
+      rw [Suffix.zero_identity]
       assumption
     | succ n =>
       specialize hr n
-      rw [suffix_composition, Nat.add_comm] at hr
+      rw [Suffix.composition, Nat.add_comm] at hr
       assumption
 
 theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ)) := by
@@ -743,9 +750,9 @@ theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (�
   · intro h
     obtain ⟨j, hj⟩ := h
     use j
-    rw [suffix_composition] at hj
+    rw [Suffix.composition] at hj
     rw [world_satisfies_next]
-    rw [suffix_composition]
+    rw [Suffix.composition]
     rw [Nat.add_comm]
     obtain ⟨hl, hr⟩ := hj
     constructor
@@ -754,16 +761,16 @@ theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (�
       intro hk
       specialize hr k hk
       rw [world_satisfies_next]
-      rw [suffix_composition]
-      rw [suffix_composition] at hr
+      rw [Suffix.composition]
+      rw [Suffix.composition] at hr
       rw [Nat.add_comm]
       assumption
   · intro h
     obtain ⟨j, hj⟩ := h
     use j
     rw [world_satisfies_next] at hj
-    rw [suffix_composition] at hj
-    rw [suffix_composition]
+    rw [Suffix.composition] at hj
+    rw [Suffix.composition]
     rw [Nat.add_comm]
     obtain ⟨hl, hr⟩ := hj
     constructor
@@ -772,8 +779,8 @@ theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (�
       intro hk
       specialize hr k hk
       rw [world_satisfies_next] at hr
-      rw [suffix_composition]
-      rw [suffix_composition] at hr
+      rw [Suffix.composition]
+      rw [Suffix.composition] at hr
       rw [Nat.add_comm]
       assumption
 
@@ -865,7 +872,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
       rw [Set.mem_def]
       rw [world_satisfies_until]
       use 0
-      rw [suffix_zero_identity]
+      rw [Suffix.zero_identity]
       constructor
       · assumption
       · intro k
@@ -881,7 +888,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
       rw [world_satisfies_until]
       rw [world_satisfies_until] at hr
       obtain ⟨j, hj⟩ := hr
-      rw [suffix_composition] at hj
+      rw [Suffix.composition] at hj
       use (1 + j)
       obtain ⟨hjl, hjr⟩ := hj
       constructor
@@ -890,14 +897,14 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
         intro hk
         cases c: k with
         | zero =>
-          rw [suffix_zero_identity]
+          rw [Suffix.zero_identity]
           assumption
         | succ n =>
           rw [c] at hk
           rw [Nat.add_comm 1 j] at hk
           rw [Nat.succ_lt_succ_iff] at hk
           specialize hjr n hk
-          rw [suffix_composition] at hjr
+          rw [Suffix.composition] at hjr
           rw [Nat.add_comm]
           assumption
 
@@ -945,14 +952,14 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
         rw [Set.mem_def]
         constructor
         · assumption
-        · rw [suffix_composition]
+        · rw [Suffix.composition]
           assumption
 
     have h₀ : σ[0…] ∈ P := by
       apply b j 0
       simp
 
-    rw [suffix_zero_identity] at h₀
+    rw [Suffix.zero_identity] at h₀
     assumption
 
 /-!
@@ -1119,14 +1126,14 @@ theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transi
 /-!
 We will now define some special kinds of LT properties, starting with **Invariants**.
 -/
-def isInvariantWithFormula {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
-def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithFormula P ϕ
+def isInvariantWithCondition {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
+def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithCondition P ϕ
 
-theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithFormula P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
+theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
   obtain ⟨ϕ, hϕ⟩ := h
-  unfold isInvariantWithFormula at hϕ
+  unfold isInvariantWithCondition at hϕ
   obtain ⟨TS, hTS⟩ := TSwts
   let hTS' := hTS
   rw [hasNoTerminalStates] at hTS
@@ -1287,7 +1294,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
     simp at hπ
     obtain ⟨Φ, hΦ⟩ := h'
     obtain ⟨hΦl, hΦr⟩ := hΦ
-    unfold isInvariantWithFormula at hΦl
+    unfold isInvariantWithCondition at hΦl
     simp at hΦr
     rw [hΦl, Set.mem_def, Set.setOf_app_iff]
     intro n
