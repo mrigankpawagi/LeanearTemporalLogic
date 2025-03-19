@@ -20,6 +20,8 @@ infixl:70 (priority := high) " ≡ " => Equivalent.Equiv
 A world is a sequence of states where each state is set of atomic propositions (that are considered true in that state).
 -/
 def World (AP: Type) : Type := ℕ → Set AP
+def FiniteWorld (AP: Type) (n: ℕ) : Type := Fin n → Set AP
+def FiniteWorldSet (AP: Type) : Type := Set (Σ n, FiniteWorld AP n)
 
 /-!
 A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
@@ -46,9 +48,9 @@ theorem Suffix.zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
 /-!
 We will also need prefixes of worlds. Note that prefixes are finite.
 -/
-def Prefix {AP: Type} (σ : World AP) (n: ℕ) : Fin n → Set AP := fun i => σ i
+def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP n := fun i => σ i
 
-def PrefixOfPrefix {AP: Type} {n : ℕ} (σ : Fin n → Set AP) (m : ℕ) (h: m ≤ n) : Fin m → Set AP := fun i => σ (Fin.castLE h i)
+def PrefixOfPrefix {AP: Type} {n : ℕ} (σ : FiniteWorld AP n) (m : ℕ) (h: m ≤ n) : FiniteWorld AP m := fun i => σ (Fin.castLE h i)
 
 /-!
 Now we define what it means for a world to satisfy an LTL formula.
@@ -1129,6 +1131,7 @@ We will now define some special kinds of LT properties, starting with **Invarian
 def isInvariantWithCondition {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
 def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithCondition P ϕ
 
+set_option pp.proofs true
 theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
@@ -1147,13 +1150,16 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       rw [Reach] at hs
       simp at hs
       unfold isReachableState at hs
-      obtain ⟨n, e, he⟩ := hs
+      obtain ⟨e, he⟩ := hs
       obtain ⟨hel, her⟩ := he
-      let πtail : FinitePathFragment TS n := finiteExecutionFragmentToFinitePathFragment e
+      let πtail : FinitePathFragment TS := finiteExecutionFragmentToFinitePathFragment e
       have htail : πtail.states = e.states := by
         unfold πtail finiteExecutionFragmentToFinitePathFragment
         simp
-      obtain ⟨tailStates, tailValid⟩ := πtail
+      have en : e.n = πtail.n := by
+        unfold πtail finiteExecutionFragmentToFinitePathFragment
+        simp
+      simp at en
       simp at htail
       have hhead : ∃ π', π' ∈ PathsFromState s := path_originates_from_state_if_noTerminalState hTS s
       obtain ⟨πhead, hπhead⟩ := hhead
@@ -1162,14 +1168,14 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       simp at h'
       simp at s
       cases c: πhead with
-      | @finite n p =>
+      | finite p =>
         rw [c] at hπhead
         unfold PathsFromState at hπhead
         simp at hπhead
         obtain ⟨hπheadmax, _⟩ := hπhead
         unfold isMaximalPathFragment endStatePathFragment at hπheadmax
         simp at hπheadmax
-        specialize hTS (p.states (Fin.last n))
+        specialize hTS (p.states (Fin.last p.n))
         contradiction
       | infinite p =>
         rw [c] at hπhead
@@ -1180,61 +1186,18 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         obtain ⟨_, headState0⟩ := hπhead
 
         -- combine πtail and πhead to form a path
-        let π := PathFragment.infinite (⟨fun i => if i < n then tailStates i else headStates (i - n),
-          by
-            intro i
-            simp
-            if h : i < n then
-              let v := tailValid (Fin.mk i h)
-              simp at v
-              simp [h]
-              if h': i + 1 < n then
-                simp [h']
-                exact v
-              else
-                simp at h'
-                rw [Nat.lt_iff_add_one_le] at h
-                have p : i + 1 = n := by apply Nat.le_antisymm <;> assumption
-                rw [p]
-                simp
-                rw [headState0]
-                if hn: n = 0 then
-                  rw [hn] at p
-                  simp at p
-                else
-                  have hnsucc : ∃ m, n = m + 1 := by
-                    apply Nat.exists_eq_succ_of_ne_zero
-                    assumption
-                  obtain ⟨m, hm⟩ := hnsucc
-                  rw [hm] at p
-                  simp at p
-                  rw [p]
-                  let v := tailValid (Fin.mk m (by rw [hm]; simp))
-                  simp at v
-                  have hv : tailStates (m + 1) = s := by
-                    rw [htail]
-                    unfold endStateExecutionFragment at her
-                    rw [← Fin.natCast_eq_last] at her
-                    rw [← her]
-                    simp [hm]
-                  rw [← hv]
-                  exact v
-            else
-              simp [h]
-              simp at h
-              have h' : ¬ (i + 1 < n) := by
-                simp only [LTLFormula.Not.not]
-                contrapose h
-                simp at h
-                rw [Nat.not_le]
-                have hii : i < i + 1 := by simp
-                apply Nat.lt_trans hii h
-              simp only [LTLFormula.Not.not] at h'
-              simp [h']
-              let v : headStates (i - n + 1) ∈ Post (headStates (i - n)) := headValid (i - n)
-              rw [Nat.sub_add_comm h]
-              exact v
-            ⟩: InfinitePathFragment TS)
+        let π := PathFragment.infinite (PathFragment.concatenate_finite_and_infinite πtail ⟨headStates, headValid⟩ (by
+          rw [htail]
+          unfold endStateExecutionFragment at her
+          simp
+          rw [headState0]
+          have heq : Fin.last e.n = Fin.last πtail.n := by
+            rw [← Fin.natCast_eq_last]
+            rw [← Fin.natCast_eq_last]
+            simp [en]
+          rw [← heq]
+          assumption
+          ))
 
         have hπ : π ∈ Paths TS := by
           unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment
@@ -1244,18 +1207,21 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
             simp
             unfold isInitialExecutionFragment startStateExecutionFragment at hel
             simp at hel
-            cases n with
+            unfold PathFragment.concatenate_finite_and_infinite
+            simp
+            cases cc: e.n with
             | zero =>
-              simp
               rw [headState0]
+              simp [← en, cc]
               unfold endStateExecutionFragment at her
               rw [← Fin.natCast_eq_last] at her
+              simp [cc] at her
               rw [← her]
               simp [hel]
             | succ m =>
-              simp
               rw [htail]
-              assumption
+              simp [← en, cc]
+              apply hel
           · unfold π
             simp
 
@@ -1263,9 +1229,9 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         rw [hϕ] at h'
         rw [Set.mem_def] at h'
         rw [Set.setOf_app_iff] at h'
-        specialize h' n
+        specialize h' e.n
 
-        have hs : (@TraceFromPathWTS AP ⟨TS, hTS⟩ π hπ) n = TS.L s := by
+        have hs : (@TraceFromPathWTS AP ⟨TS, hTS⟩ π hπ) e.n = TS.L s := by
           unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
           unfold Paths isPath at hπ
           simp at hπ
@@ -1273,7 +1239,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
           rw [maximalIffInfinitePathFragment hTS'] at hπr
           simp
           match c: π with
-          | @PathFragment.finite AP TS n p =>
+          | PathFragment.finite p =>
             simp
             contradiction
           | PathFragment.infinite p =>
@@ -1282,7 +1248,8 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
             unfold π at c
             simp at c
             rw [← c]
-            simp
+            unfold PathFragment.concatenate_finite_and_infinite
+            simp [en]
             rw [headState0]
 
         rw [hs] at h'
@@ -1300,7 +1267,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
     intro n
     unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
     cases π with
-    | @finite _ _ =>
+    | finite _ =>
       unfold Paths isPath at hπ
       simp at hπ
       obtain ⟨hπl, hπr⟩ := hπ
@@ -1311,9 +1278,8 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       have hreach : p.states n ∈ Reach TS := by
         unfold Reach isReachableState
         simp
-        use n
         let eInf := infinitePathFragmentToInfiniteExecutionFragment p
-        let e : FiniteExecutionFragment TS n := ⟨fun i => eInf.states i, fun i => eInf.actions i, by
+        let e : FiniteExecutionFragment TS := ⟨n, fun i => eInf.states i, fun i => eInf.actions i, by
           intro i
           simp
           exact eInf.valid i⟩
@@ -1333,5 +1299,28 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
           simp
       specialize hΦr (p.states n) hreach
       assumption
+
+
+def isSafetyProperty {AP: Type} (P: LTProperty AP) : Prop := ∀ (σ: World AP), σ ∉ P → ∃ n, ∀ σ', (Prefix σ' n = Prefix σ n) → σ' ∉ P
+
+def isBadPrefix {AP: Type} {n: ℕ} (P: LTProperty AP) (ω: FiniteWorld AP n) : Prop := isSafetyProperty P ∧ ∀ σ, (Prefix σ n = ω) → σ ∉ P
+
+def isMinimalBadPrefix {AP: Type} {n: ℕ} (P: LTProperty AP) (ω: FiniteWorld AP n) : Prop := isBadPrefix P ω ∧ ∀ (m: ℕ) (h: m < n), ¬ (isBadPrefix P (PrefixOfPrefix ω m (by
+  rw [Nat.le_iff_lt_or_eq]
+  left
+  assumption
+)))
+
+/-! Set of all bad prefixes -/
+def BadPref {AP: Type} (P: LTProperty AP) : FiniteWorldSet AP := {⟨_, ω⟩ | isBadPrefix P ω}
+
+/-! Set of all minimal bad prefixes -/
+def MinBadPref {AP: Type} (P: LTProperty AP) : FiniteWorldSet AP := {⟨_, ω⟩ | isMinimalBadPrefix P ω}
+
+-- -- we need to define Membership of traces in the set of finite worlds and vice versa
+-- instance {AP: Type} : Membership (
+
+-- theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ω ∉ TracesFin TSwts.TS := by
+--   sorry
 
 end section

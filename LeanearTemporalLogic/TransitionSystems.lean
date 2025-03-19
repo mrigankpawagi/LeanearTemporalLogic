@@ -56,7 +56,8 @@ def hasNoTerminalStates {AP: Type} (TS : TransitionSystem AP) : Prop := ∀ s : 
 /-!
 Execution fragments can be finite or infinite alternating sequences of states and actions, ending in a state.
 -/
-structure FiniteExecutionFragment {AP: Type} (TS: TransitionSystem AP) (n : ℕ) where
+structure FiniteExecutionFragment {AP: Type} (TS: TransitionSystem AP) where
+  n : ℕ
   states : Fin (n + 1) → TS.S
   actions : Fin n → TS.Act
   valid : ∀ (i: Fin n), TS.Trans (states i) (actions i) (states (i + 1))
@@ -67,7 +68,7 @@ structure InfiniteExecutionFragment {AP: Type} (TS: TransitionSystem AP) where
   valid: ∀ (i: ℕ), TS.Trans (states i) (actions i) (states (i + 1))
 
 inductive ExecutionFragment {AP: Type} (TS: TransitionSystem AP) : Type
-  | finite {n : ℕ} (e : FiniteExecutionFragment TS n)
+  | finite (e : FiniteExecutionFragment TS)
   | infinite (e : InfiniteExecutionFragment TS)
 
 /-!
@@ -78,7 +79,7 @@ def startStateExecutionFragment {AP: Type} {TS : TransitionSystem AP} (e: Execut
   | ExecutionFragment.finite e => e.states 0
   | ExecutionFragment.infinite e => e.states 0
 
-def endStateExecutionFragment {AP: Type} {TS : TransitionSystem AP} {n : ℕ} (e: FiniteExecutionFragment TS n) : TS.S := e.states (Fin.last n)
+def endStateExecutionFragment {AP: Type} {TS : TransitionSystem AP} (e: FiniteExecutionFragment TS) : TS.S := e.states (Fin.last e.n)
 
 def isFiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} (e: ExecutionFragment TS) : Prop := match e with
   | ExecutionFragment.finite _ => True
@@ -139,14 +140,15 @@ A *reachable* state is one that appears at the end of an initial, finite executi
 We wil define the set of all reachable states.
 -/
 def isReachableState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Prop :=
-  ∃ (n: ℕ) (e: FiniteExecutionFragment TS n), isInitialExecutionFragment (ExecutionFragment.finite e) ∧ endStateExecutionFragment e = s
+  ∃ (e: FiniteExecutionFragment TS), isInitialExecutionFragment (ExecutionFragment.finite e) ∧ endStateExecutionFragment e = s
 
 def Reach {AP: Type} (TS: TransitionSystem AP) : Set TS.S := { s | isReachableState s }
 
 /-!
 It is usually easier to work with **Path Fragments** than with **Execution Fragments**.
 -/
-structure FinitePathFragment {AP: Type} (TS: TransitionSystem AP) (n : ℕ) where
+structure FinitePathFragment {AP: Type} (TS: TransitionSystem AP) where
+  n : ℕ
   states : Fin (n + 1) → TS.S
   valid : ∀ (i: Fin n), states (i + 1) ∈ Post (states i)
 
@@ -155,7 +157,7 @@ structure InfinitePathFragment {AP: Type} (TS: TransitionSystem AP) where
   valid: ∀ (i: ℕ), states (i + 1) ∈ Post (states i)
 
 inductive PathFragment {AP: Type} (TS: TransitionSystem AP) : Type
-  | finite {n : ℕ} (p : FinitePathFragment TS n)
+  | finite (p : FinitePathFragment TS)
   | infinite (p : InfinitePathFragment TS)
 
 /-!
@@ -163,7 +165,7 @@ Some helpful functions for working with path fragments.
 -/
 def getPathState {AP: Type} {TS : TransitionSystem AP} (π : PathFragment TS) (i: ℕ) : Option TS.S :=
   match π with
-  | @PathFragment.finite _ _ n π => if i < n then some (π.states i) else none
+  | PathFragment.finite π => if i < π.n then some (π.states i) else none
   | PathFragment.infinite π => some (π.states i)
 
 def startStatePathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : TS.S :=
@@ -173,12 +175,12 @@ def startStatePathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragme
 
 def endStatePathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : Option TS.S :=
   match π with
-  | @PathFragment.finite _ _ n π => π.states (Fin.last n)
+  | PathFragment.finite π => π.states (Fin.last π.n)
   | PathFragment.infinite _ => none
 
 def lengthPathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : Option ℕ :=
   match π with
-  | @PathFragment.finite _ _ n _ => n
+  | PathFragment.finite π => π.n
   | PathFragment.infinite _ => none
 
 def isFinitePathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : Prop := match π with
@@ -189,7 +191,7 @@ def isInfinitePathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragme
   | PathFragment.infinite _ => True
   | _ => False
 
-def finiteExecutionFragmentToFinitePathFragment {AP: Type} {TS : TransitionSystem AP} {n: ℕ} (e: FiniteExecutionFragment TS n) : FinitePathFragment TS n := ⟨e.states, by
+def finiteExecutionFragmentToFinitePathFragment {AP: Type} {TS : TransitionSystem AP} (e: FiniteExecutionFragment TS) : FinitePathFragment TS := ⟨e.n, e.states, by
   intro i
   unfold Post
   unfold PostAction
@@ -212,7 +214,7 @@ def executionFragmentToPathFragment {AP: Type} {TS : TransitionSystem AP} (e: Ex
   | ExecutionFragment.finite e => PathFragment.finite (finiteExecutionFragmentToFinitePathFragment e)
   | ExecutionFragment.infinite e => PathFragment.infinite (infiniteExecutionFragmentToInfinitePathFragment e)
 
-noncomputable def finitePathFragmentToFiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} {n: ℕ} (π: FinitePathFragment TS n) : FiniteExecutionFragment TS n := ⟨π.states,
+noncomputable def finitePathFragmentToFiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} (π: FinitePathFragment TS) : FiniteExecutionFragment TS := ⟨π.n, π.states,
   fun i => by
     have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
     unfold Post PostAction at h
@@ -271,10 +273,10 @@ theorem maximalIffInfinitePathFragment {AP: Type} {TS : TransitionSystem AP} (h 
   constructor
   · intro hmax
     cases π with
-    | @finite n π =>
+    | finite π =>
       simp
       simp at hmax
-      specialize h (π.states (Fin.last n))
+      specialize h (π.states (Fin.last π.n))
       contradiction
     | infinite π =>
       simp
@@ -304,11 +306,11 @@ def PathsFin {AP: Type} (TS: TransitionSystem AP) : Set (PathFragment TS) := { e
 def PathsFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (PathFragment TS) :=
   { π | isMaximalPathFragment π ∧ startStatePathFragment π = s }
 
-def PathsFinFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (PathFragment TS) :=
-  { π | isFinitePathFragment π ∧ startStatePathFragment π = s }
+def PathsFinFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (FinitePathFragment TS) :=
+  { π | startStatePathFragment (PathFragment.finite π) = s }
 
 /-!
-Some helpful lemmas.
+Some helpful lemmas and functions.
 -/
 theorem path_starts_from_startState {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) (h: π ∈ Paths TS)
 : π ∈ PathsFromState (startStatePathFragment π) := by
@@ -360,19 +362,58 @@ theorem path_originates_from_state_if_noTerminalState {AP: Type} {TS : Transitio
   unfold construct_pathStates_from_state_if_noTerminalState
   simp
 
+def PathFragment.concatenate_finite_and_infinite {AP: Type} {TS : TransitionSystem AP} (π: FinitePathFragment TS) (π': InfinitePathFragment TS) (hcont : π.states (Fin.last π.n) = π'.states 0) : InfinitePathFragment TS := ⟨fun i => if i < π.n then π.states i else π'.states (i - π.n), by
+  intro i
+  simp
+  if hi: i < π.n then
+    simp [hi]
+    if hii: i + 1 < π.n then
+      simp [hii]
+      have hv := π.valid (Fin.mk i hi)
+      simp at hv
+      exact hv
+    else
+      simp at hii
+      have hieq : i + 1 = π.n := by apply Nat.le_antisymm <;> assumption
+      rw [hieq]
+      simp
+      rw [← hcont]
+      have hv := π.valid (Fin.mk i hi)
+      simp at hv
+      rw [← Nat.cast_add_one, hieq] at hv
+      simp [← Fin.natCast_eq_last]
+      exact hv
+  else
+    simp [hi]
+    simp at hi
+    apply Nat.lt_add_one_of_le at hi
+    if hii : i + 1 < π.n then
+      simp at hii
+      have hc := Nat.lt_trans hii hi
+      simp at hc
+    else
+      simp [hii]
+      have hv := π'.valid (i - π.n)
+      rw [Nat.sub_add_comm (by
+        rw [← Nat.lt_add_one_iff]
+        exact hi)]
+      exact hv⟩
+
 /-!
 The *trace* of a path fragment is its projection onto 2^AP.
 -/
-def FiniteTrace (AP: Type) (n : ℕ) := Fin (n + 1) → Set AP
+structure FiniteTrace (AP: Type) where
+  n : ℕ
+  trace : Fin (n + 1) → Set AP
 
 def InfiniteTrace (AP: Type) := ℕ → Set AP
 
 inductive Trace (AP: Type) : Type
-  | finite {n : ℕ} (trace : FiniteTrace AP n)
+  | finite (trace : FiniteTrace AP)
   | infinite (trace : InfiniteTrace AP)
 
-def FiniteTraceFromFinitePathFragment {AP: Type} {TS : TransitionSystem AP} {n: ℕ} (π: FinitePathFragment TS n) : FiniteTrace AP n :=
-  fun i ↦ TS.L (π.states i)
+def FiniteTraceFromFinitePathFragment {AP: Type} {TS : TransitionSystem AP} (π: FinitePathFragment TS) : FiniteTrace AP :=
+  ⟨π.n, fun i ↦ TS.L (π.states i)⟩
 
 def InfiniteTraceFromInfinitePathFragment {AP: Type} {TS : TransitionSystem AP} (π: InfinitePathFragment TS) : InfiniteTrace AP :=
   fun i ↦ TS.L (π.states i)
@@ -388,13 +429,13 @@ def TraceFromPathFragmentSet {AP: Type} {TS : TransitionSystem AP} (P : Set (Pat
 def TracesFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (Trace AP) :=
   TraceFromPathFragmentSet (PathsFromState s)
 
-def TracesFinFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (Trace AP) :=
-  TraceFromPathFragmentSet (PathsFinFromState s)
+def TracesFinFromState {AP: Type} {TS : TransitionSystem AP} (s: TS.S) : Set (FiniteTrace AP) :=
+  Set.image (fun π ↦ FiniteTraceFromFinitePathFragment π) (PathsFinFromState s)
 
 def Traces {AP: Type} (TS: TransitionSystem AP) : Set (Trace AP) :=
   ⋃ s ∈ {s | TS.I s}, TracesFromState s
 
-def TracesFin {AP: Type} (TS: TransitionSystem AP) : Set (Trace AP) :=
+def TracesFin {AP: Type} (TS: TransitionSystem AP) : Set (FiniteTrace AP) :=
   ⋃ s ∈ {s | TS.I s}, TracesFinFromState s
 
 /-!
@@ -420,29 +461,24 @@ def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragmen
         simp at h₂)
   | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
-def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP := by
-  rw [PathsFromState, Set.mem_setOf] at h
-  obtain ⟨h₁, _⟩ := h
-  rw [maximalIffInfinitePathFragment TSwts.h] at h₁
-
+def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP :=
   match π with
-  | PathFragment.finite _ =>
+  | PathFragment.finite _ => False.elim (by
+      rw [PathsFromState, Set.mem_setOf] at h
+      obtain ⟨h₁, _⟩ := h
+      rw [maximalIffInfinitePathFragment TSwts.h] at h₁
       unfold isInfinitePathFragment at h₁
-      simp at h₁
-  | PathFragment.infinite π' =>
-      -- we can now construct the infinite trace
-      have t : InfiniteTrace AP := InfiniteTraceFromInfinitePathFragment π'
-      exact t
+      simp at h₁)
+  | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
-def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) (h' : TSwts.TS.I s) : InfiniteTrace AP := by
-  have h₁ : π ∈ Paths TSwts.TS := by
+def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) (h' : TSwts.TS.I s) : InfiniteTrace AP :=
+  TraceFromPathWTS π (by
     rw [Paths, Set.mem_setOf, isPath]
     rw [isInitialPathFragment]
     rw [PathsFromState, Set.mem_setOf] at h
     obtain ⟨hl, hr⟩ := h
     rw [hr]
-    constructor <;> assumption
-  exact TraceFromPathWTS π h₁
+    constructor <;> assumption)
 
 def TracesFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) : Set (InfiniteTrace AP) :=
   { t | ∃ (p: PathFragment TSwts.TS) (h: p ∈ PathsFromState s), t = TraceFromPathFromStateWTS s p h }
