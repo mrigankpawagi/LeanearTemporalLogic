@@ -20,8 +20,10 @@ infixl:70 (priority := high) " ≡ " => Equivalent.Equiv
 A world is a sequence of states where each state is set of atomic propositions (that are considered true in that state).
 -/
 def World (AP: Type) : Type := ℕ → Set AP
-def FiniteWorld (AP: Type) (n: ℕ) : Type := Fin n → Set AP
-def FiniteWorldSet (AP: Type) : Type := Set (Σ n, FiniteWorld AP n)
+
+structure FiniteWorld (AP: Type) where
+  n : ℕ
+  f : Fin (n + 1) → Set AP
 
 /-!
 A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
@@ -48,9 +50,9 @@ theorem Suffix.zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
 /-!
 We will also need prefixes of worlds. Note that prefixes are finite.
 -/
-def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP n := fun i => σ i
+def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP := ⟨n, fun i => σ i⟩
 
-def PrefixOfPrefix {AP: Type} {n : ℕ} (σ : FiniteWorld AP n) (m : ℕ) (h: m ≤ n) : FiniteWorld AP m := fun i => σ (Fin.castLE h i)
+def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : FiniteWorld AP := ⟨m, fun i => ω.f (Fin.castLE (by simp[h]) i)⟩
 
 /-!
 Now we define what it means for a world to satisfy an LTL formula.
@@ -1131,7 +1133,6 @@ We will now define some special kinds of LT properties, starting with **Invarian
 def isInvariantWithCondition {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
 def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithCondition P ϕ
 
-set_option pp.proofs true
 theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
@@ -1303,24 +1304,212 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
 
 def isSafetyProperty {AP: Type} (P: LTProperty AP) : Prop := ∀ (σ: World AP), σ ∉ P → ∃ n, ∀ σ', (Prefix σ' n = Prefix σ n) → σ' ∉ P
 
-def isBadPrefix {AP: Type} {n: ℕ} (P: LTProperty AP) (ω: FiniteWorld AP n) : Prop := isSafetyProperty P ∧ ∀ σ, (Prefix σ n = ω) → σ ∉ P
+def isBadPrefix {AP: Type} (P: LTProperty AP) (ω: FiniteWorld AP) : Prop := isSafetyProperty P ∧ ∀ σ, (Prefix σ (ω.n) = ω) → σ ∉ P
 
-def isMinimalBadPrefix {AP: Type} {n: ℕ} (P: LTProperty AP) (ω: FiniteWorld AP n) : Prop := isBadPrefix P ω ∧ ∀ (m: ℕ) (h: m < n), ¬ (isBadPrefix P (PrefixOfPrefix ω m (by
+def isMinimalBadPrefix {AP: Type} (P: LTProperty AP) (ω: FiniteWorld AP) : Prop := isBadPrefix P ω ∧ ∀ (m: ℕ) (h: m < ω.n), ¬ (isBadPrefix P (PrefixOfPrefix ω m (by
   rw [Nat.le_iff_lt_or_eq]
   left
   assumption
 )))
 
 /-! Set of all bad prefixes -/
-def BadPref {AP: Type} (P: LTProperty AP) : FiniteWorldSet AP := {⟨_, ω⟩ | isBadPrefix P ω}
+def BadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isBadPrefix P ω}
 
 /-! Set of all minimal bad prefixes -/
-def MinBadPref {AP: Type} (P: LTProperty AP) : FiniteWorldSet AP := {⟨_, ω⟩ | isMinimalBadPrefix P ω}
+def MinBadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isMinimalBadPrefix P ω}
 
--- -- we need to define Membership of traces in the set of finite worlds and vice versa
--- instance {AP: Type} : Membership (
+-- we will define the inclusion of finite worlds in sets of finite traces
+instance {AP: Type} : Membership (FiniteWorld AP) (Set (FiniteTrace AP)) := ⟨fun S ω ↦ ∃ t ∈ S, (t.n = ω.n) ∧ (∀ i, t.trace i = ω.f i)⟩
 
--- theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ω ∉ TracesFin TSwts.TS := by
---   sorry
+theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ω ∉ TracesFin TSwts.TS := by
+  have hTS := TSwts.h
+  unfold hasNoTerminalStates at hTS
+  constructor
+  · intro h₁
+    by_contra h₂
+    simp at h₂
+    obtain ⟨ω, hω⟩ := h₂
+    obtain ⟨hω₁, hω₂⟩ := hω
+    simp [Satisfaction.Satisfies] at h₁
+    unfold TracesWTS at h₁
+    simp at h₁
+    unfold BadPref isBadPrefix at hω₁
+    simp at hω₁
+    obtain ⟨_, hω₁⟩ := hω₁
+    simp [Membership.mem] at hω₂
+    obtain ⟨t, ht⟩ := hω₂
+    unfold TracesFin at ht
+    rw [Set.Mem] at ht
+    simp at ht
+    rw [Set.setOf_app_iff] at ht
+    obtain ⟨ht₁, ht₂⟩ := ht
+    obtain ⟨s, hs⟩ := ht₁
+    obtain ⟨heq, hfeq⟩ := ht₂
+    obtain ⟨hsi, hp⟩ := hs
+    unfold TracesFinFromState at hp
+    simp at hp
+    obtain ⟨π, hπ⟩ := hp
+    obtain ⟨hπl, hπr⟩ := hπ
+    let hinfπ := path_originates_from_state_if_noTerminalState hTS (π.states (Fin.last π.n))
+    obtain ⟨πinf, hπinf⟩ := hinfπ
+
+    match πinf with
+    | PathFragment.finite p =>
+      unfold PathsFromState at hπinf
+      simp at hπinf
+      obtain ⟨hmax, _⟩ := hπinf
+      unfold isMaximalPathFragment endStatePathFragment at hmax
+      simp at hmax
+      specialize hTS (p.states (Fin.last p.n))
+      contradiction
+    | PathFragment.infinite p =>
+      have hcont : π.states (Fin.last π.n) = p.states 0 := by
+        unfold PathsFromState at hπinf
+        simp at hπinf
+        obtain ⟨_, hstart⟩ := hπinf
+        unfold startStatePathFragment at hstart
+        simp at hstart
+        rw [hstart]
+      let π' := PathFragment.concatenate_finite_and_infinite π p hcont
+
+      let Trace := InfiniteTraceFromInfinitePathFragment π'
+      let σ : World AP := Trace
+      have hpref : Prefix σ ω.n = ω := by
+        unfold Prefix
+        obtain ⟨n, f⟩ := ω
+        simp
+        simp at hfeq
+        funext i
+        specialize hfeq i
+        unfold σ Trace InfiniteTraceFromInfinitePathFragment π' PathFragment.concatenate_finite_and_infinite
+        simp
+        rw [← hπr] at hfeq
+        unfold FiniteTraceFromFinitePathFragment at hfeq
+        simp at hfeq
+        rw [← hπr] at heq
+        unfold FiniteTraceFromFinitePathFragment at heq
+        simp at heq
+        if c: i < n then
+          have h': (i: ℕ) < π.n := by
+            rw [heq]
+            rw [@Fin.lt_iff_val_lt_val] at c
+            simp at c
+            simp [c]
+          simp [h']
+          rw [hfeq]
+          rw [Nat.mod_eq_of_lt]
+          simp
+          apply Nat.lt_add_one_of_lt
+          assumption
+        else
+          simp at c
+          rw [c]
+          simp
+          simp [heq]
+          rw [c] at hfeq
+          simp [heq] at hfeq
+          rw [← hfeq, ← hcont, ← heq, Fin.natCast_eq_last]
+      specialize hω₁ σ hpref
+      specialize h₁ s hsi
+      unfold TracesFromInitialStateWTS at h₁
+      rw [Set.setOf_subset] at h₁
+      simp at h₁
+
+      specialize h₁ Trace (PathFragment.infinite π')
+      have hpath : (PathFragment.infinite π') ∈ PathsFromState s := by
+        unfold π' PathFragment.concatenate_finite_and_infinite PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment
+        simp
+        if c: 0 < π.n then
+          simp [c]
+          unfold PathsFinFromState startStatePathFragment at hπl
+          simp at hπl
+          assumption
+        else
+          simp [c]
+          simp at c
+          unfold PathsFinFromState startStatePathFragment at hπl
+          simp at hπl
+          rw [← hcont, ← hπl]
+          rw [← Fin.natCast_eq_last]
+          simp [c]
+
+      specialize h₁ hpath
+      have htr : Trace = TraceFromPathFromInitialStateWTS s (PathFragment.infinite π') hpath hsi := by
+        unfold Trace TraceFromPathFromInitialStateWTS TraceFromPathWTS
+        simp
+
+      rw [htr] at h₁
+      simp at h₁
+      rw [← htr] at h₁
+      unfold σ at hω₁
+      contradiction
+  · intro h₁
+    by_contra h₂
+    simp [Satisfaction.Satisfies] at h₂
+    unfold TracesWTS TracesFromInitialStateWTS at h₂
+    simp at h₂
+    obtain ⟨s, hs, h₂⟩ := h₂
+    rw [Set.subset_def] at h₂
+    simp at h₂
+    obtain ⟨trace, hπ, h₂⟩ := h₂
+    obtain ⟨π, hπpath, hπ⟩ := hπ
+
+    let hsafe := h
+    unfold isSafetyProperty at h
+    specialize h trace
+    apply h at h₂
+    obtain ⟨nω, hbad⟩ := h₂
+    let ω : FiniteWorld AP := ⟨nω, fun i => trace i⟩
+    specialize h₁ ω
+    unfold BadPref isBadPrefix at h₁
+    simp [hsafe] at h₁
+    have h' : True ∧ ∀ (σ : World AP), Prefix σ ω.n = ω → σ ∉ P := by constructor <;> trivial
+    apply h₁ at h'
+    unfold TracesFin TracesFinFromState at h'
+    simp at h'
+    simp [Membership.mem] at h'
+    simp [Set.Mem] at h'
+    specialize h' ⟨nω, ω.f⟩
+    rw [Set.setOf_app_iff] at h'
+    simp at h'
+    specialize h' s hs
+
+    match π with
+    | PathFragment.finite p =>
+      unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπpath
+      simp at hπpath
+      obtain ⟨hπl, hπr⟩ := hπpath
+      specialize hTS (p.states (Fin.last p.n))
+      contradiction
+    | PathFragment.infinite p =>
+      let πfin : FinitePathFragment TSwts.TS := ⟨nω, fun i => p.states i, by
+      intro i
+      have hv := p.valid i
+      simp
+      exact hv⟩
+      specialize h' πfin
+
+      have h₀ : PathsFinFromState s πfin := by
+        unfold PathsFinFromState startStatePathFragment πfin
+        rw [Set.setOf_app_iff]
+        simp
+        unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπpath
+        simp at hπpath
+        assumption
+
+      have h₀' : FiniteTraceFromFinitePathFragment πfin = { n := nω, trace := ω.f } := by
+        unfold FiniteTraceFromFinitePathFragment πfin ω
+        simp
+        funext i
+        rw [hπ]
+        unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
+        simp
+
+      apply h' at h₀
+      apply h₀ at h₀'
+      unfold ω at h₀'
+      simp at h₀'
+      rw [propext (not_iff_false_intro ⟨trivial, trivial⟩)] at h₀'
+      apply h₀'
 
 end section

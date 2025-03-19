@@ -436,7 +436,7 @@ def Traces {AP: Type} (TS: TransitionSystem AP) : Set (Trace AP) :=
   ⋃ s ∈ {s | TS.I s}, TracesFromState s
 
 def TracesFin {AP: Type} (TS: TransitionSystem AP) : Set (FiniteTrace AP) :=
-  ⋃ s ∈ {s | TS.I s}, TracesFinFromState s
+  { t | ∃ s ∈ {s | TS.I s}, t ∈ TracesFinFromState s }
 
 /-!
 We will specifically be interested in Transition Systems with no terminal states. We will define some structures and functions to make it easier to work with them.
