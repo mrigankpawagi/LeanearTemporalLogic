@@ -141,56 +141,106 @@ Implements transition systems and related concepts for modeling state-based syst
 
 ### Satisfaction
 
-Implements the semantics of LTL and provides various proofs:
+- **Core Type Classes**:
+  - `Satisfaction`: Generic type class for defining satisfaction relations
+  - `Equivalent`: Type class for defining equivalence relations
 
-- World-based semantics for LTL formulas
-- Satisfaction relations between worlds and formulas
-- Suffix operations on worlds
-- Equivalence relation between LTL formulas
-- Key theorems and equivalences:
-  - Double negation
-  - Dualities for temporal operators
-  - Idempotence of temporal operators
-  - Absorption laws
-  - Expansion laws for until, eventually, and always
-  - Distributive properties
-  - "Until is the Least Solution of the Expansion Law" theorem
-- Satisfaction of LT properties by transition systems
-- Trace inclusion and equivalence theorems
-- Invariant properties and their relationship to reachability
+- **Worlds**:
+  - `World`: Represents a sequence of states where each state is a set of atomic propositions
+  - `FiniteWorld`: Represents a world with a finite number of states
+  - `Suffix`: Function to create a suffix of a world starting at a specific index
+  - `Prefix`: Function to create a prefix (initial segment) of a world
+  - `PrefixOfPrefix`: Function to create a prefix of a prefix
+  - `pref`: Function that returns the set of all prefixes of a world
+  - **Some useful lemmae**
+    - `Suffix.composition`: $\sigma[i\ldots][j\ldots] = \sigma[i+j\ldots]$
+    - `Suffix.zero_identity`: $\sigma[0\ldots] = \sigma$
 
-## Key Formalizations and Theorems
+- **Satisfaction of LTL Formulae by Worlds**:
+  - $$\sigma \vDash \varphi$$: A world $$\sigma$$ satisfies an LTL formula $$\varphi$$
+  - $$s \vDash \varphi$$: A state $$s$$ satisfies an LTL formula $$\varphi$$
+  - **Derived rules for satisfaction**
+    - `world_satisfies_negation`: $$(σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ))$$
+      - `world_satisfies_or`: $$(σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂))$$
+    - `world_satisfies_and`: $$(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))$$
+    - `world_satisfies_next`: $$(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)$$
+    - `world_satisfies_until`: $$(σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ j, (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁)))$$
+    - `world_satisfies_eventually`: $$ (σ ⊨ (♢ ϕ)) ↔ ∃ i, ((σ[i…]) ⊨ ϕ)$$
+    - `world_satisfies_always`: $$(σ ⊨ (□ ϕ)) ↔ ∀ i, ((σ[i…]) ⊨ ϕ)$$
+    - `world_satisfies_always_eventually`: $$(σ ⊨ (□ ♢ ϕ)) ↔ ∀ i, ∃ j, ((σ[i+j…]) ⊨ ϕ)$$
+    - `world_satisfies_eventually_always`: $$(σ ⊨ (♢ □ ϕ)) ↔ ∃ i, ∀ j, ((σ[i+j…]) ⊨ ϕ)$$
+  - `Worlds`: Maps an LTL formula to the set of worlds that satisfy it
 
-The project includes formalizations and proofs of many important LTL concepts:
+- **Equivalence of LTL Formulae**:
+  - $$ϕ ≡ ψ$$: Two LTL formulae $$ϕ$$ and $$ψ$$ are equivalent if they are satisfied by the same set of worlds
+  - `equivalent_ltl_refl`, `equivalent_ltl_symm`, `equivalent_ltl_trans`: Formula equivalence is an equivalence relation
+  - **Derived rules for equivalence**
+    - `equivalent_ltl_preserves_negation`: $$(ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ))$$
+    - `equivalent_ltl_preserves_always`: $$(ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ))$$
+    - `ltl_double_negation`: $$(¬ (¬ ϕ)) ≡ ϕ$$
+    - **Dualities**
+      - `ltl_duality_next`: $$(¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))$$
+      - `ltl_duality_eventually`: $$(¬ (♢ ϕ)) ≡ (□ (¬ ϕ))$$
+      - `ltl_duality_always`: $$(¬ (□ ϕ)) ≡ (♢ (¬ ϕ))$$
+    - **Idempotence**
+      - `ltl_idempotence_eventually`: $$(♢ (♢ ϕ)) ≡ (♢ ϕ)$$
+      - `ltl_idempotence_always`: $$(□ (□ ϕ)) ≡ (□ ϕ)$$
+      - `ltl_idempotence_until_left`: $$((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ)$$
+      - `ltl_idempotence_until_right`: $$ϕ 𝓤 (ψ 𝓤 ψ) ≡ ϕ 𝓤 ψ$$
+    - **Absorption**
+      - `ltl_absorption_always_eventually`: $$(♢ (□ (♢ ϕ))) ≡ (□ (♢ ϕ))$$
+      - `ltl_absorption_eventually_always`: $$(□ (♢ (□ ϕ))) ≡ (♢ (□ ϕ))$$
+    - **Expansions**
+      - `ltl_expansion_until`: $$(ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ))))$$
+      - `ltl_expansion_eventually`: $$(♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ)))$$
+      - `ltl_expansion_always`: $$(□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ)))$$
+    - **Distributivity**
+      - `ltl_distributive_next_until`: $$(◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ))$$
+      - `ltl_distributive_eventually_or`: $$(♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ))$$
+      - `ltl_distributive_always_and`: $$(□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ))$$
+  - `until_least_solution_of_expansion_law`: Until is the Least Solution of the Expansion Law
+  
+- **Satisfaction of PL Formulae by Sets of Atomic Propositions**:
+  - $$A \vDash \varphi$$: A set of atomic propositions $$A$$ satisfies a PL formula $$\varphi$$
+  - **Derived rules for satisfaction**
+    - `set_satisfies_negation`: $$(A ⊨ (¬ ϕ)) ↔ (¬ (A ⊨ ϕ))$$
+    - `set_satisfies_or`: $$(A ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((A ⊨ ϕ₁) ∨ (A ⊨ ϕ₂))$$
+    - `set_satisfies_and`: $$(A ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((A ⊨ ϕ₁) ∧ (A ⊨ ϕ₂))$$
 
-1. **LTL Equivalences**:
-   - `ltl_double_negation`: ¬¬φ ≡ φ
-   - `ltl_duality_next`: ¬◯φ ≡ ◯¬φ
-   - `ltl_duality_eventually`: ¬♢φ ≡ □¬φ
-   - `ltl_duality_always`: ¬□φ ≡ ♢¬φ
-   - `ltl_idempotence_eventually`: ♢♢φ ≡ ♢φ
-   - `ltl_idempotence_always`: □□φ ≡ □φ
-   - `ltl_absorption_always_eventually`: ♢□♢φ ≡ □♢φ
-   - `ltl_absorption_eventually_always`: □♢□φ ≡ ♢□φ
-   - `ltl_expansion_until`: φ 𝓤 ψ ≡ ψ ∨ (φ ∧ ◯(φ 𝓤 ψ))
-   - `ltl_expansion_eventually`: ♢φ ≡ φ ∨ ◯♢φ
-   - `ltl_expansion_always`: □φ ≡ φ ∧ ◯□φ
-
-2. **Semantic Properties**:
-   - `until_least_solution_of_expansion_law`: Proof that Until is the least solution of its expansion law
-   - `world_satisfies_eventually_always`: Characterization of ♢□φ
-   - `world_satisfies_always_eventually`: Characterization of □♢φ
-
-3. **System Verification**:
-   - `trace_inclusion_and_LTProperties`: Relation between trace inclusion and LT properties
-   - `trace_equivalence_and_LTProperties`: Trace equivalence theorem
-   - `invariant_satisfaction_reachability`: Characterization of invariant verification through reachability analysis
+- **Satisfaction of LT Properties by Transition Systems**:
+  - $$TS \vDash P$$: A transition system satisfies an LT property
+  - $$TSwts \vDash P$$: A transition system without terminal states satisfies an LT property
+  - **Auxiliary Lemmae and Theorems**
+    - `ltproperty_satisfaction_allPaths`: A transition system satisfies a property if the traces of all its paths are in the property
+    - `trace_inclusion_and_LTProperties`: Trace Inclusion and LT Properties
+    - `trace_equivalence_and_LTProperties`: Trace Equivalence and LT Properties
+  - **Results for special kinds of LT properties**
+    - **Invariants**
+      - `invariant_satisfaction_reachability`: A system satisfies an invariant property iff all reachable states satisfy the invariant condition
+    - **Safety Properties**
+      - **Additional Structures**
+        - `BadPref`, `MinBadPref`: Sets of all bad prefixes and minimal bad prefixes for a property
+        - `prefLTProperty`: Set of all prefixes of traces in an LT property
+        - `closureLTProperty`: Closure of an LT property
+        - `closure_contains_property`: A property is contained in its closure
+        - `safety_closure`: A property is a safety property iff it equals its closure
+        - `closure_of_traces`: The closure of a system's traces is a safety property that the system satisfies
+        - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
+        - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
+      - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is finite trace of the system
+      - `safety_finite_trace_inclusion`: Finite Trace Inclusion and Safety Properties
 
 ## Future Work
 
-Potential future extensions to this formalization include:
+### Planned goals
 
-- Adding more complex temporal operators (e.g., release, weak until)
-- Implementing model checking algorithms for LTL
-- Defining fairness and other characteristics for LT properties
-- Proving results about Büchi automata
+- Proving a corollary about Finite Trace Equivalence and Safety Properties, and a theorem about Relating Finite Trace and Trace Inclusion
+- Formalizing liveness properties and related results
+- Formalizing fairness and related results
+- Defining more derived operators for LTL, like release and weak until, and proving related results
+
+### Ambitious goals
+
+- Implementing (checked) algorithms for model-checking LT properties, with particular algorithms for invariant, safety, and liveness properties
+- Implementing an (checked) algorithm for model-checking LT Properties
+- Formalizing Büchi automata and proving regularity results
