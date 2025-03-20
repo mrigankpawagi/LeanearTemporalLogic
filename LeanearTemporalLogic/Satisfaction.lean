@@ -57,11 +57,6 @@ def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : 
 def pref {AP: Type} (σ: World AP) : Set (FiniteWorld AP) := fun ω => ∃ (n: ℕ), ω = Prefix σ n
 
 /-!
-Now some useful lemmas for prefixes.
--/
-theorem Prefix.identity {AP: Type} (σ : World AP) (ω : FiniteWorld AP) : Prefix σ ω.n = ω
-
-/-!
 Now we define what it means for a world to satisfy an LTL formula.
 -/
 section
