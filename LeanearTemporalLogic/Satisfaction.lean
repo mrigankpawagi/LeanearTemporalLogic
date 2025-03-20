@@ -54,6 +54,8 @@ def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP := ⟨n, fun i =
 
 def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : FiniteWorld AP := ⟨m, fun i => ω.f (Fin.castLE (by simp[h]) i)⟩
 
+def pref {AP: Type} (σ: World AP) : Set (FiniteWorld AP) := fun ω => ∃ (n: ℕ), ω = Prefix σ n
+
 /-!
 Now we define what it means for a world to satisfy an LTL formula.
 -/
@@ -1511,5 +1513,89 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       simp at h₀'
       rw [propext (not_iff_false_intro ⟨trivial, trivial⟩)] at h₀'
       apply h₀'
+
+/-!
+We will define prefixes and closures for LT properties to provide an alternative characterization of safety properties.
+-/
+def prefLTProperty {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := ⋃ σ ∈ P, pref σ
+
+def closureLTProperty {AP: Type} (P: LTProperty AP) : Set (World AP) := {σ | pref σ ⊆ prefLTProperty P}
+
+instance {AP: Type} : HasSubset (LTProperty AP) := ⟨fun P Q ↦ ∀ σ, σ ∈ P → σ ∈ Q⟩
+
+theorem closure_contains_property {AP: Type} (P: LTProperty AP) : P ⊆ (closureLTProperty P) := by
+  rw [Set.subset_def]
+  intro σ hσ
+  unfold closureLTProperty prefLTProperty
+  rw [Set.mem_def, Set.setOf_app_iff]
+  rw [Set.subset_def]
+  intro ω hω
+  rw [Set.mem_iUnion]
+  use σ
+  simp
+  exact ⟨hσ, hω⟩
+
+theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ closureLTProperty P = P := by
+  constructor
+  · intro h₁
+    rw [Set.Subset.antisymm_iff]
+    constructor
+    · rw [Set.subset_def]
+      by_contra hc
+      simp at hc
+      obtain ⟨σ, hc⟩ := hc
+      obtain ⟨hclos, hσ⟩ := hc
+      unfold isSafetyProperty at h₁
+      specialize h₁ σ hσ
+      obtain ⟨n, h₁⟩ := h₁
+      unfold closureLTProperty prefLTProperty at hclos
+      rw [Set.mem_def, Set.setOf_app_iff] at hclos
+      rw [Set.subset_def] at hclos
+      specialize hclos (Prefix σ n) (by
+        unfold pref
+        rw [Set.mem_def]
+        use n)
+      simp at hclos
+      obtain ⟨σ', hσ'⟩ := hclos
+      specialize h₁ σ'
+      obtain ⟨hl, hr⟩ := hσ'
+      unfold pref at hr
+      rw [Set.mem_def] at hr
+      obtain ⟨m, hr⟩ := hr
+      have hnm : n = m := by
+        unfold Prefix at hr
+        simp at hr
+        obtain ⟨h', _⟩ := hr
+        assumption
+      rw [← hnm] at hr
+      rw [Eq.symm hr] at h₁
+      simp [hr] at h₁
+      contradiction
+    · apply closure_contains_property
+  · intro h₁
+    unfold isSafetyProperty
+    intro σ hσ
+    rw [← h₁] at hσ
+    unfold closureLTProperty at hσ
+    rw [Set.mem_def, Set.setOf_app_iff] at hσ
+    unfold prefLTProperty at hσ
+    rw [Set.not_subset_iff_exists_mem_not_mem] at hσ
+    obtain ⟨ω, hω⟩ := hσ
+    obtain ⟨hpref, hp⟩ := hω
+    simp at hp
+    unfold pref at hpref
+    rw [Set.mem_def] at hpref
+    obtain ⟨n, hpref⟩ := hpref
+    use n
+    intro σ' hσ'
+    rw [← hpref] at hσ'
+    by_contra hc
+    specialize hp σ' hc
+    unfold pref at hp
+    rw [Set.mem_def] at hp
+    simp at hp
+    specialize hp n
+    rw [← hσ'] at hp
+    contradiction
 
 end section
