@@ -9,7 +9,7 @@ This is a formalization of Linear Temporal Logic (LTL) in the Lean 4 theorem pro
 
 [LTL](https://en.wikipedia.org/wiki/Linear_temporal_logic) is a logic for expressing constraints on *paths*. A *path* is a (countably infinite) sequence of *states*. A *state* is a set of propositional formulae (denoting the set of formulae that "hold in that state"). LTL provides operators for expressing constraints on states of a path, for instance, "formula $$X$$ holds in state $$S$$", "formula $$X$$ eventually holds after state $$S$$", "formula $$X$$ always holds after state $$S$$", etc. Paths can also be described as executions of a transition system. When dealing with paths with only finitely many propositional variables across all states (so that there are only finitely many inequivalent states, each of which can be thought of as a subset of the chosen set of propositional variables), LTL formulae can be equivalently described as automata (called [Büchi Automata](https://en.wikipedia.org/wiki/B%C3%BCchi_automaton)) which operate on infinite words (where the set of states is the alphabet).
 
-LTL is of great interest for several software verification tasks, especially for concurrent programs, since the ability to check whether a path satisfies an LTL formula (what is called model-checking) immediately provides us the ability to check whether a program (real programs only have finitely many (program) states, but may run indefinitely and so may be modelled by paths over a finite set of states) violates a given specification expressed as an LTL formula (in which case we know that the program is buggy).
+LTL is of great interest for several software verification tasks, especially for concurrent programs, since the ability to check whether a path satisfies an LTL formula (what is called model-checking) immediately provides us the ability to check whether a program (real programs only have finitely many (program) states, but may run indefinitely and so may be modeled by paths over a finite set of states) violates a given specification expressed as an LTL formula (in which case we know that the program is buggy).
 
 I am aware of at least four Lean 3 projects aiming to formalize LTL, and these are listed below. I would like to acknowledge any other projects that I may have missed. Since none of these are maintained or have been ported to Lean 4, the aim of *LeanearTemporalLogic* is to provide a Lean 4 formalization of LTL and several related tools and results.
 
@@ -17,6 +17,8 @@ I am aware of at least four Lean 3 projects aiming to formalize LTL, and these a
 2. [loganrjmurphy/lean-temporal](https://github.com/loganrjmurphy/lean-temporal)
 3. [James-Oswald/linear-temporal-logic](https://github.com/James-Oswald/linear-temporal-logic)
 4. [GaloisInc/lean-protocol-support/tree/master/galois/temporal](https://github.com/GaloisInc/lean-protocol-support/tree/master/galois/temporal)
+
+I am using [Principles of Model Checking](https://web.eecs.umich.edu/~movaghar/Principles%20of%20Model%20Checking-Book-2008.pdf) by Baier and Katoen as my primary reference for this work.
 
 ## Project Structure
 
@@ -46,7 +48,7 @@ This module also provides functions for calculating the length of formulae. Whil
 
 ### LTProperty
 
-Provides a definition of Linear Time Properties as subsets of $$(2^{\text{AP}})^\omega$$ where $$\text{AP}$$ is the set of atomic propositions that parameterizes LT Properties.
+Provides a definition of Linear Time Properties as subsets of $$(2^{\text{AP}})^\omega$$ where $$\text{AP}$$ is the set of atomic propositions that parameterize LT Properties.
 
 ### TransitionSystems
 
@@ -227,7 +229,7 @@ Implements transition systems and related concepts for modeling state-based syst
         - `closure_of_traces`: The closure of a system's traces is a safety property that the system satisfies
         - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
         - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
-      - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is finite trace of the system
+      - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is a finite trace of the system
       - `safety_finite_trace_inclusion`: Finite Trace Inclusion and Safety Properties
 
 ## Future Work
