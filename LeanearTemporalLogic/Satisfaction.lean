@@ -57,6 +57,11 @@ def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : 
 def pref {AP: Type} (σ: World AP) : Set (FiniteWorld AP) := fun ω => ∃ (n: ℕ), ω = Prefix σ n
 
 /-!
+Now some useful lemmas for prefixes.
+-/
+theorem Prefix.identity {AP: Type} (σ : World AP) (ω : FiniteWorld AP) : Prefix σ ω.n = ω
+
+/-!
 Now we define what it means for a world to satisfy an LTL formula.
 -/
 section
@@ -1011,7 +1016,12 @@ instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := �
 
 instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.TS.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
--- We need to define membership of an Infinite Trace in an LT Property
+/-!
+We define some coercions and membership relations to easily work with traces and LT properties.
+-/
+instance {AP: Type} : Coe (FiniteWorld AP) (FiniteTrace AP) := ⟨fun ω => ⟨ω.n, ω.f⟩⟩
+instance {AP: Type} : Coe (FiniteTrace AP) (FiniteWorld AP) := ⟨fun σ => ⟨σ.n, σ.f⟩⟩
+
 instance {AP: Type} : Membership (InfiniteTrace AP) (LTProperty AP) := ⟨fun P π ↦ by
   rw [LTProperty] at P
   rw [InfiniteTrace] at π
@@ -1320,10 +1330,7 @@ def BadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isBad
 /-! Set of all minimal bad prefixes -/
 def MinBadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isMinimalBadPrefix P ω}
 
--- we will define the inclusion of finite worlds in sets of finite traces
-instance {AP: Type} : Membership (FiniteWorld AP) (Set (FiniteTrace AP)) := ⟨fun S ω ↦ ∃ t ∈ S, (t.n = ω.n) ∧ (∀ i, t.trace i = ω.f i)⟩
-
-theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ω ∉ TracesFin TSwts.TS := by
+theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ↑ω ∉ TracesFin TSwts.TS := by
   have hTS := TSwts.h
   unfold hasNoTerminalStates at hTS
   constructor
@@ -1339,15 +1346,9 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
     simp at hω₁
     obtain ⟨_, hω₁⟩ := hω₁
     simp [Membership.mem] at hω₂
-    obtain ⟨t, ht⟩ := hω₂
-    unfold TracesFin at ht
-    rw [Set.Mem] at ht
-    simp at ht
-    rw [Set.setOf_app_iff] at ht
-    obtain ⟨ht₁, ht₂⟩ := ht
-    obtain ⟨s, hs⟩ := ht₁
-    obtain ⟨heq, hfeq⟩ := ht₂
+    obtain ⟨s, hs⟩ := hω₂
     obtain ⟨hsi, hp⟩ := hs
+    rw [Set.mem_def, Set.setOf_app_iff] at hsi
     unfold TracesFinFromState at hp
     simp at hp
     obtain ⟨π, hπ⟩ := hp
@@ -1380,37 +1381,39 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
         unfold Prefix
         obtain ⟨n, f⟩ := ω
         simp
-        simp at hfeq
         funext i
-        specialize hfeq i
+        simp at hπr
         unfold σ Trace InfiniteTraceFromInfinitePathFragment π' PathFragment.concatenate_finite_and_infinite
         simp
-        rw [← hπr] at hfeq
-        unfold FiniteTraceFromFinitePathFragment at hfeq
-        simp at hfeq
-        rw [← hπr] at heq
-        unfold FiniteTraceFromFinitePathFragment at heq
-        simp at heq
+        unfold FiniteTraceFromFinitePathFragment at hπr
+        simp at hπr
+        obtain ⟨heq, hfeq⟩ := hπr
+        rw [propext (Fin.heq_fun_iff (congrFun (congrArg HAdd.hAdd heq) 1))] at hfeq
         if c: i < n then
           have h': (i: ℕ) < π.n := by
             rw [heq]
             rw [@Fin.lt_iff_val_lt_val] at c
             simp at c
             simp [c]
+          have h'' : (i: ℕ) < π.n + 1 := by
+            apply Nat.lt_add_one_of_lt
+            assumption
           simp [h']
           rw [hfeq]
-          rw [Nat.mod_eq_of_lt]
-          simp
-          apply Nat.lt_add_one_of_lt
-          assumption
+          simp [Nat.mod_eq_of_lt h'']
         else
           simp at c
           rw [c]
           simp
           simp [heq]
-          rw [c] at hfeq
-          simp [heq] at hfeq
-          rw [← hfeq, ← hcont, ← heq, Fin.natCast_eq_last]
+          specialize hfeq i
+          simp [c] at hfeq
+          rw [← hcont, ← Fin.natCast_eq_last]
+          simp [heq]
+          rw [hfeq]
+          simp [heq]
+          unfold Fin.last
+          simp
       specialize hω₁ σ hpref
       specialize h₁ s hsi
       unfold TracesFromInitialStateWTS at h₁
@@ -1471,9 +1474,6 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
     simp at h'
     simp [Membership.mem] at h'
     simp [Set.Mem] at h'
-    specialize h' ⟨nω, ω.f⟩
-    rw [Set.setOf_app_iff] at h'
-    simp at h'
     specialize h' s hs
 
     match π with
@@ -1499,7 +1499,7 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
         simp at hπpath
         assumption
 
-      have h₀' : FiniteTraceFromFinitePathFragment πfin = { n := nω, trace := ω.f } := by
+      have h₀' : FiniteTraceFromFinitePathFragment πfin = { n := nω, f := ω.f } := by
         unfold FiniteTraceFromFinitePathFragment πfin ω
         simp
         funext i
@@ -1509,9 +1509,6 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
 
       apply h' at h₀
       apply h₀ at h₀'
-      unfold ω at h₀'
-      simp at h₀'
-      rw [propext (not_iff_false_intro ⟨trivial, trivial⟩)] at h₀'
       apply h₀'
 
 /-!
@@ -1597,5 +1594,25 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     specialize hp n
     rw [← hσ'] at hp
     contradiction
+
+/-!
+Now we will prove a theorem about **Finite Trace Inclusion and Safety Properties**.
+-/
+theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : TransitionSystemWTS AP) : (TracesFin TSwts₁.TS ⊆ TracesFin TSwts₂.TS) ↔ ∀ (P: LTProperty AP), isSafetyProperty P → (TSwts₂ ⊨ P → TSwts₁ ⊨ P) := by
+  constructor
+  · intro h₁
+    intro P hPsafe h₂
+    have h₃ := safety_satisfaction TSwts₂ P hPsafe
+    have h₄ := safety_satisfaction TSwts₁ P hPsafe
+    rw [h₃] at h₂
+    rw [h₄]
+    intro ω hω
+    specialize h₂ ω hω
+    by_contra hc
+    rw [Set.subset_def] at h₁
+    specialize h₁ (ω : FiniteTrace AP) hc
+    contradiction
+  · intro h₁
+    sorry
 
 end section

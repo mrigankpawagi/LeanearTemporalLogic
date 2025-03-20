@@ -404,7 +404,7 @@ The *trace* of a path fragment is its projection onto 2^AP.
 -/
 structure FiniteTrace (AP: Type) where
   n : ℕ
-  trace : Fin (n + 1) → Set AP
+  f : Fin (n + 1) → Set AP
 
 def InfiniteTrace (AP: Type) := ℕ → Set AP
 
