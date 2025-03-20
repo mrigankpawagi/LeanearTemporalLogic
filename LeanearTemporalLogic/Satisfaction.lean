@@ -1017,10 +1017,15 @@ We define some coercions and membership relations to easily work with traces and
 instance {AP: Type} : Coe (FiniteWorld AP) (FiniteTrace AP) := ⟨fun ω => ⟨ω.n, ω.f⟩⟩
 instance {AP: Type} : Coe (FiniteTrace AP) (FiniteWorld AP) := ⟨fun σ => ⟨σ.n, σ.f⟩⟩
 
+instance {AP: Type} : Coe (Set (FiniteWorld AP)) (Set (FiniteTrace AP)) := ⟨fun S => {σ | ↑σ ∈ S}⟩
+instance {AP: Type} : Coe (Set (FiniteTrace AP)) (Set (FiniteWorld AP)) := ⟨fun S => {ω | ↑ω ∈ S}⟩
+
 instance {AP: Type} : Membership (InfiniteTrace AP) (LTProperty AP) := ⟨fun P π ↦ by
   rw [LTProperty] at P
   rw [InfiniteTrace] at π
   exact π ∈ P⟩
+
+instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (Set (World AP)) := ⟨fun TSwts P ↦ TracesWTS TSwts ⊆ P⟩
 
 /-!
 Some auxiliary lemmas about satisfaction of LT properties.
@@ -1590,6 +1595,259 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     rw [← hσ'] at hp
     contradiction
 
+theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyProperty (closureLTProperty (TracesWTS TSwts)) ∧ (TSwts ⊨ closureLTProperty (TracesWTS TSwts)) := by
+  constructor
+  · unfold isSafetyProperty
+    intro σ hσ
+    unfold closureLTProperty at hσ
+    rw [Set.mem_def, Set.setOf_app_iff] at hσ
+    unfold prefLTProperty at hσ
+    rw [Set.subset_def] at hσ
+    simp at hσ
+    obtain ⟨ω, hω⟩ := hσ
+    obtain ⟨hωl, hωr⟩ := hω
+    unfold pref at hωl
+    rw [Set.mem_def] at hωl
+    obtain ⟨n, hωl⟩ := hωl
+    use n
+    rw [← hωl]
+    intro σ' hσ'
+    unfold closureLTProperty prefLTProperty
+    rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def]
+    simp
+    use ω
+    constructor
+    · unfold pref
+      rw [Set.mem_def]
+      use n
+      rw [hσ']
+    · assumption
+  · simp [Satisfaction.Satisfies]
+    unfold closureLTProperty
+    rw [Set.subset_def]
+    intro σ hσ
+    rw [Set.mem_def, Set.setOf_app_iff]
+    unfold prefLTProperty
+    rw [Set.subset_def]
+    intro ω hω
+    rw [Set.mem_iUnion]
+    use σ
+    simp
+    exact ⟨hσ, hω⟩
+
+theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : TracesFin TSwts.TS = prefLTProperty (TracesWTS TSwts) := by
+  unfold prefLTProperty
+  simp
+  rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+  constructor
+  · intro t ht
+    unfold TracesFin at ht
+    rw [Set.mem_def, Set.setOf_app_iff] at ht
+    obtain ⟨s, hs, ht⟩ := ht
+    simp at hs
+    unfold TracesFinFromState at ht
+    simp at ht
+    obtain ⟨πtail, hπ⟩ := ht
+    obtain ⟨hπl, hπr⟩ := hπ
+    simp
+
+    -- create a full path
+    let hπhead := path_originates_from_state_if_noTerminalState TSwts.h (πtail.states (Fin.last πtail.n))
+    obtain ⟨πhead, hπhead⟩ := hπhead
+    match πhead with
+    | PathFragment.finite p =>
+      unfold PathsFromState at hπhead
+      simp at hπhead
+      obtain ⟨hπheadmax, _⟩ := hπhead
+      unfold isMaximalPathFragment endStatePathFragment at hπheadmax
+      simp at hπheadmax
+      obtain ⟨_, hTS⟩ := TSwts
+      specialize hTS (p.states (Fin.last p.n))
+      contradiction
+    | PathFragment.infinite p =>
+      let π := PathFragment.concatenate_finite_and_infinite πtail p (by
+        unfold PathsFromState startStatePathFragment at hπhead
+        simp at hπhead
+        obtain ⟨hπheadl, hπheadr⟩ := hπhead
+        rw [hπheadr]
+      )
+      have htrace : PathFragment.infinite π ∈ TSwts.TS.Paths := by
+        unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment startStatePathFragment
+        simp
+        unfold π PathFragment.concatenate_finite_and_infinite
+        simp
+        if c: 0 < πtail.n then
+          simp [c]
+          unfold PathsFinFromState startStatePathFragment at hπl
+          simp at hπl
+          rw [hπl]
+          assumption
+        else
+          simp [c]
+          simp at c
+          unfold PathsFinFromState startStatePathFragment at hπl
+          simp at hπl
+          unfold PathsFromState startStatePathFragment at hπhead
+          simp at hπhead
+          obtain ⟨_, hπhead⟩ := hπhead
+          rw [hπhead]
+          rw [← Fin.natCast_eq_last]
+          simp [c]
+          rw [hπl]
+          assumption
+      let trace := TraceFromPathWTS (PathFragment.infinite π) htrace
+      use trace
+      constructor
+      · unfold trace TracesWTS TracesFromInitialStateWTS TraceFromPathWTS
+        rw [Set.mem_iUnion]
+        simp
+        use s, hs
+        use (PathFragment.infinite π)
+        use (by
+          unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment π
+          unfold PathFragment.concatenate_finite_and_infinite
+          simp
+          if c: 0 < πtail.n then
+            simp [c]
+            unfold PathsFinFromState startStatePathFragment at hπl
+            simp at hπl
+            rw [hπl]
+          else
+            simp [c]
+            simp at c
+            unfold PathsFinFromState startStatePathFragment at hπl
+            simp at hπl
+            unfold PathsFromState startStatePathFragment at hπhead
+            simp at hπhead
+            obtain ⟨_, hπhead⟩ := hπhead
+            rw [hπhead]
+            rw [← Fin.natCast_eq_last]
+            simp [c]
+            rw [hπl])
+        unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS
+        simp
+      · unfold pref
+        rw [Set.mem_def]
+        use t.n
+        rw [← hπr]
+        unfold FiniteTraceFromFinitePathFragment
+        unfold Prefix
+        simp
+        funext i
+        unfold trace π PathFragment.concatenate_finite_and_infinite TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
+        simp
+        if c: ↑i < πtail.n then
+          simp [c]
+        else
+          obtain ⟨i, hi⟩ := i
+          simp [c]
+          simp at c
+          have h': i ≤ πtail.n := by
+            rw [Nat.le_iff_lt_add_one]
+            assumption
+          have heq : i = πtail.n := by apply Nat.le_antisymm <;> assumption
+          simp [heq]
+          unfold PathsFromState startStatePathFragment at hπhead
+          simp at hπhead
+          obtain ⟨_, hπhead⟩ := hπhead
+          rw [hπhead]
+          aesop
+
+  · intro t ht
+    unfold TracesFin TracesFinFromState
+    simp
+    rw [Set.mem_def, Set.setOf_app_iff] at ht
+    obtain ⟨T, hT⟩ := ht
+    obtain ⟨hT₁, hT₂⟩ := hT
+    unfold TracesWTS TracesFromInitialStateWTS at hT₁
+    rw [Set.mem_iUnion] at hT₁
+    simp at hT₁
+    obtain ⟨s, hs, hT₁⟩ := hT₁
+    use s, hs
+    obtain ⟨π, hπ, hT₁⟩ := hT₁
+    unfold pref Prefix at hT₂
+    rw [Set.mem_def] at hT₂
+    simp at hT₂
+    unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS at hT₁
+    cases π with
+    | finite p =>
+      unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
+      simp at hπ
+      obtain ⟨hπ, _⟩ := hπ
+      obtain ⟨_, hTS⟩ := TSwts
+      specialize hTS (p.states (Fin.last p.n))
+      contradiction
+    | infinite p =>
+      unfold InfiniteTraceFromInfinitePathFragment at hT₁
+      simp at hT₁
+      rw [hT₁] at hT₂
+      simp at hT₂
+      let πfin : FinitePathFragment TSwts.TS := ⟨t.n, fun i => p.states i, by
+        intro i
+        have hv := p.valid i
+        simp
+        exact hv⟩
+      use πfin
+      unfold PathsFinFromState startStatePathFragment
+      simp
+      constructor
+      · unfold πfin
+        simp
+        unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
+        simp at hπ
+        assumption
+      · unfold FiniteTraceFromFinitePathFragment πfin
+        simp
+        obtain ⟨n, f⟩ := t
+        simp
+        simp at hT₂
+        rw [hT₂]
+
+theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTProperty (closureLTProperty P) = prefLTProperty P := by
+  rw [Set.Subset.antisymm_iff]
+  constructor
+  · unfold prefLTProperty
+    rw [Set.subset_def]
+    intro ω hω
+    rw [Set.mem_iUnion] at hω
+    obtain ⟨σ, hσ, hω⟩ := hω
+    simp at hω
+    rw [Set.mem_iUnion]
+    simp
+    obtain ⟨hω₁, hω₂⟩ := hω
+    obtain ⟨hω₁, hω₃⟩ := hω₁
+    rw [← hω₃] at hω₂
+    unfold closureLTProperty at hω₁
+    rw [Set.mem_def, Set.setOf_app_iff] at hω₁
+    unfold prefLTProperty at hω₁
+    rw [Set.subset_def] at hω₁
+    specialize hω₁ ω hω₂
+    rw [Set.mem_iUnion] at hω₁
+    simp at hω₁
+    obtain ⟨σ', hσ', hω₁⟩ := hω₁
+    use σ'
+  · unfold prefLTProperty
+    rw [Set.subset_def]
+    intro ω hω
+    rw [Set.mem_iUnion] at hω
+    obtain ⟨σ, hσ, hω⟩ := hω
+    simp at hω
+    rw [Set.mem_iUnion]
+    simp
+    obtain ⟨hω₁, hω₂⟩ := hω
+    obtain ⟨hω₁, hω₃⟩ := hω₁
+    rw [← hω₃] at hω₂
+    unfold closureLTProperty
+    use σ
+    rw [Set.mem_def, Set.setOf_app_iff]
+    unfold prefLTProperty
+    rw [Set.subset_def]
+    simp
+    constructor
+    · intro ω' hω'
+      use σ
+    · assumption
+
 /-!
 Now we will prove a theorem about **Finite Trace Inclusion and Safety Properties**.
 -/
@@ -1608,6 +1866,36 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
     specialize h₁ (ω : FiniteTrace AP) hc
     contradiction
   · intro h₁
-    sorry
+    have hclose := closure_of_traces TSwts₂
+    obtain ⟨hclose₁, hclose₂⟩ := hclose
+    specialize h₁ (closureLTProperty (TracesWTS TSwts₂)) hclose₁ hclose₂
+    simp [Satisfaction.Satisfies] at h₁
+    have h₂ := finite_traces_are_prefixes TSwts₁
+    have h₃ := finite_traces_are_prefixes TSwts₂
+    have h₄ : prefLTProperty (TracesWTS TSwts₁) ⊆ prefLTProperty (closureLTProperty (TracesWTS TSwts₂)) := by
+      rw [Set.subset_def]
+      intro ω hω
+      unfold prefLTProperty at hω
+      rw [Set.mem_iUnion] at hω
+      obtain ⟨σ, hσ, hω⟩ := hω
+      simp at hω
+      obtain ⟨hω₁, hω₃⟩ := hω
+      obtain ⟨hω₁, hω₂⟩ := hω₁
+      rw [← hω₂] at hω₃
+      apply h₁ at hω₁
+      unfold prefLTProperty
+      rw [Set.mem_iUnion]
+      use σ
+      simp
+      exact ⟨hω₁, hω₃⟩
+    have h₅ := prefix_of_closure_is_prefix (TracesWTS TSwts₂)
+
+    rw [h₂, h₃]
+    simp
+    intro t
+    intro ht
+    apply h₄ at ht
+    rw [← h₅]
+    assumption
 
 end section
