@@ -44,23 +44,100 @@ Propositional Logic (PL) formulas are defined as a subset of LTL formulas withou
 
 This module also provides functions for calculating the length of formulae. While this was added merely as a sanity check for the syntax, it may be useful for reasoning about the time complexity of model-checking algorithms.
 
-### TransitionSystems
-
-Defines transition systems and related concepts:
-
-- `TransitionSystem` structure: `(S, Act, ⟶, I, L)` parameterized by atomic propositions
-- Finite transition systems
-- Successors and predecessors (direct and set-based)
-- Terminal states
-- Execution fragments (finite and infinite)
-- Paths and path fragments
-- Traces of executions and paths
-- Specialized structures for transition systems without terminal states
-
-
 ### LTProperty
 
-- Definition of Linear Time Properties as sets of infinite sequences
+Provides a definition of Linear Time Properties as subsets of $$(2^{\text{AP}})^\omega$$ where $$\text{AP}$$ is the set of atomic propositions that parameterizes LT Properties.
+
+### TransitionSystems
+
+Implements transition systems and related concepts for modeling state-based systems:
+
+- `TransitionSystem`: Core structure parameterized by atomic propositions, consisting of:
+  - `S`: Set of states
+  - `Act`: Set of actions/transitions
+  - `Trans`: Transition relation between states via actions
+  - `I`: Set of initial states
+  - `L`: Labeling function mapping states to sets of atomic propositions
+
+- **System Properties**:
+  - `isFinite`: Determines if a transition system has finite states, actions, and atomic propositions
+  - `hasNoTerminalStates`: Specifies that a transition system contains no terminal states
+  - `isTerminalState`: Identifies states without successors
+
+- **State Relations and Successors**:
+  - `PostAction`: Set of successors of a state via a specific action
+  - `Post`: Set of all successors of a state (via any action)
+  - `PreAction`: Set of predecessors of a state via a specific action
+  - `Pre`: Set of all predecessors of a state (via any action)
+  - `PostActionSet`, `PostSet`, `PreActionSet`, `PreSet`: Extended versions for sets of states
+
+- **Execution Fragments**:
+  - `FiniteExecutionFragment`: Finite alternating sequence of states and actions with valid transitions
+  - `InfiniteExecutionFragment`: Infinite alternating sequence of states and actions with valid transitions
+  - `ExecutionFragment`: Either a finite or infinite execution fragment
+  - `startStateExecutionFragment`, `endStateExecutionFragment`: Extract the start and end states (`Option.none` for infinite fragments) of an execution respectively
+  - `isFiniteExecutionFragment`, `isInfiniteExecutionFragment`: Determines if an execution fragment is finite or infinite
+  - `isMaximalExecutionFragment`: Determines if an execution fragment is maximal, i.e., either finite and ending in a terminal state, or infinite
+  - `isInitialExecutionFragment`: Determines if an execution fragment starts from an initial state
+  - `isExecution`: Defines an execution as an initial, maximal execution fragment
+
+- **Path Fragments**
+  - `FinitePathFragment`: Finite sequence of states with valid transitions
+  - `InfinitePathFragment`: Infinite sequence of states with valid transitions
+  - `PathFragment`: Either a finite or infinite path fragment
+  - `getPathState`: Extracts the state at a given index in a path fragment
+  - `startStatePathFragment`, `endStatePathFragment`: Extract the start and end states (`Option.none` for infinite fragments)
+   of a path fragment
+  - `lengthPathFragment`: Returns the length of a path fragment (`Option.none` for infinite fragments)
+  - `isFinitePathFragment`, `isInfinitePathFragment`: Determines if a path fragment is finite or infinite
+  - `isMaximalPathFragment`: Determines if a path fragment is maximal, i.e., either finite and ending in a terminal state, or infinite
+  - `isInitialPathFragment`: Determines if a path fragment starts from an initial state
+  - `PathFragment.concatenate_finite_and_infinite`: Concatenates a finite and infinite path fragment
+
+- **Conversion between Execution Fragments and Path Fragments**:
+  - `finiteExecutionFragmentToFinitePathFragment`, `infiniteExecutionFragmentToInfinitePathFragment`: Convert finite and infinite execution fragments to finite and infinite path fragments respectively
+  - `executionFragmentToPathFragment`: Convert an execution fragment to a path fragment (combining the above functions)
+  - (noncomputable) `finitePathFragmentToFiniteExecutionFragment`, `infinitePathFragmentToInfiniteExecutionFragment`: Convert finite and infinite path fragments to finite and infinite
+  - (noncomputable) `pathFragmentToExecutionFragment`: Convert a path fragment to an execution fragment (combining the above functions)
+
+- **Paths and Reachability**:
+  - `isReachableState`: Determines if a state is reachable through an initial, finite execution fragment
+  - `Reach`: Set of all reachable states in a transition system
+  - `isPath`: Defines a path as an initial, maximal path fragment
+  - `Paths`: Set of all paths in a transition system
+  - `PathsFromState`: Set of all paths starting from a given state
+  - `PathsFin`: Set of all finite paths in a transition system
+  - `PathsFinFromState`: Set of all finite paths starting from a given state
+
+- **Traces**:
+  - `FiniteTrace`: Finite sequence of sets of atomic propositions
+  - `InfiniteTrace`: Infinite sequence of sets of atomic propositions
+  - `Trace`: Either a finite or infinite trace
+  - `FiniteTraceFromFinitePathFragment`, `InfiniteTraceFromInfinitePathFragment`: Convert finite and infinite path fragments to finite and infinite traces respectively
+  - `TraceFromPathFragment`: Convert a path fragment to a trace (combining the above functions)
+  - `TraceFromPathFragmentSet`: Convert a set of path fragments to a set of traces
+  - `TracesFromState`: Set of traces of paths starting from a given state
+  - `TracesFinFromState`: Set of (finite) traces of finite paths starting from a given state
+  - `Traces`: Sets of all traces starting from initial states
+  - `TracesFin`: Sets of all finite traces starting from initial states
+
+- `TransitionSystemWithoutTerminalStates` (abbreviated as `TransitionSystemWTS`): A transition system guaranteed to have no terminal states
+  - `TraceFromPathWTS`: Convert a (infinite) path fragment to a (infinte) trace
+  - `TraceFromPathFromStateWTS`: Convert a (infinite) path fragment starting from a given state to a (infinite) trace
+  - `TraceFromPathFromInitialStateWTS`: Convert a (infinite) path fragment starting from an initial state to a (infinite) trace
+  - `TracesFromStateWTS`: Set of (infinite) traces of (infinite) paths starting from a given state
+  - `TracesFromInitialStateWTS`: Set of (infinite) traces of (infinite) paths starting from an initial state
+  - `TracesWTS`: Set of (infinite) traces of (infinite) paths starting from initial states
+
+#### Theorems and Lemmas
+
+- **Terminal States and Maximal Fragments**:
+  - `maximalIffInfiniteExecutionFragment`: In transition systems without terminal states, an execution fragment is maximal if and only if it is infinite
+  - `maximalIffInfinitePathFragment`: In transition systems without terminal states, a path fragment is maximal if and only if it is infinite
+
+- **Path Properties**:
+  - `path_starts_from_startState`: Every path is contained in the set of paths starting from its start state
+  - `path_originates_from_state_if_noTerminalState`: In a transition system without terminal states, there is a path originating from every state
 
 ### Satisfaction
 
