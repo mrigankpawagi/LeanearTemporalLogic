@@ -1848,6 +1848,20 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
       use σ
     · assumption
 
+theorem prefix_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P₂ → prefLTProperty P₁ ⊆ prefLTProperty P₂ := by
+  repeat rw [Set.subset_def]
+  intro h
+  intro ω hω
+  unfold prefLTProperty at hω
+  rw [Set.mem_iUnion] at hω
+  simp at hω
+  obtain ⟨σ, hσ, hω⟩ := hω
+  specialize h σ hσ
+  unfold prefLTProperty
+  rw [Set.mem_iUnion]
+  simp
+  use σ
+
 /-!
 Now we will prove a theorem about **Finite Trace Inclusion and Safety Properties**.
 -/
@@ -1897,5 +1911,24 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
     apply h₄ at ht
     rw [← h₅]
     assumption
+
+theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : TransitionSystemWTS AP) : (TracesFin TSwts₁.TS = TracesFin TSwts₂.TS) ↔ ∀ (P: LTProperty AP), isSafetyProperty P → (TSwts₁ ⊨ P ↔ TSwts₂ ⊨ P) := by
+  rw [Set.Subset.antisymm_iff]
+  repeat rw [safety_finite_trace_inclusion]
+  constructor
+  · intro h
+    intro P hPsafe
+    rw [iff_iff_implies_and_implies]
+    obtain ⟨h₁, h₂⟩ := h
+    specialize h₁ P hPsafe
+    specialize h₂ P hPsafe
+    constructor <;> assumption
+  · intro h
+    constructor <;> (
+      intro P hPsafe
+      specialize h P hPsafe
+      rw [h]
+      simp
+    )
 
 end section

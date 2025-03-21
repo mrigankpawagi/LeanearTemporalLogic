@@ -229,14 +229,16 @@ Implements transition systems and related concepts for modeling state-based syst
         - `closure_of_traces`: The closure of a system's traces is a safety property that the system satisfies
         - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
         - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
+        - `prefix_monotonicity`: Prefixes of a set contains the prefixes of its subsets
       - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is a finite trace of the system
       - `safety_finite_trace_inclusion`: Finite Trace Inclusion and Safety Properties
+      - `safety_finite_trace_equivalence`: Finite Trace Equivalence and Safety Properties
 
 ## Future Work
 
 ### Planned goals
 
-- Proving a corollary about Finite Trace Equivalence and Safety Properties, and a theorem about Relating Finite Trace and Trace Inclusion
+- Proving a theorem about Relating Finite Trace and Trace Inclusion
 - Formalizing liveness properties and related results
 - Formalizing fairness and related results
 - Defining more derived operators for LTL, like release and weak until, and proving related results
