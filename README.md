@@ -154,9 +154,15 @@ Implements transition systems and related concepts for modeling state-based syst
   - `Prefix`: Function to create a prefix (initial segment) of a world
   - `PrefixOfPrefix`: Function to create a prefix of a prefix
   - `pref`: Function that returns the set of all prefixes of a world
+  - `prefLTProperty`: Set of all prefixes of traces in an LT property
+  - `closureLTProperty`: Closure of an LT property
   - **Some useful lemmae**
     - `Suffix.composition`: $\sigma[i\ldots][j\ldots] = \sigma[i+j\ldots]$
     - `Suffix.zero_identity`: $\sigma[0\ldots] = \sigma$
+    - `prefix_monotonicity`: Prefixes of a set contains the prefixes of its subsets
+    - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
+    - `closure_contains_property`: A property is contained in its closure
+    - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
 
 - **Satisfaction of LTL Formulae by Worlds**:
   - $$\sigma \vDash \varphi$$: A world $$\sigma$$ satisfies an LTL formula $$\varphi$$
@@ -220,16 +226,10 @@ Implements transition systems and related concepts for modeling state-based syst
     - **Invariants**
       - `invariant_satisfaction_reachability`: A system satisfies an invariant property iff all reachable states satisfy the invariant condition
     - **Safety Properties**
-      - **Additional Structures**
+      - **Additional Structures and Lemmae**
         - `BadPref`, `MinBadPref`: Sets of all bad prefixes and minimal bad prefixes for a property
-        - `prefLTProperty`: Set of all prefixes of traces in an LT property
-        - `closureLTProperty`: Closure of an LT property
-        - `closure_contains_property`: A property is contained in its closure
         - `safety_closure`: A property is a safety property iff it equals its closure
         - `closure_of_traces`: The closure of a system's traces is a safety property that the system satisfies
-        - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
-        - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
-        - `prefix_monotonicity`: Prefixes of a set contains the prefixes of its subsets
       - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is a finite trace of the system
       - `safety_finite_trace_inclusion`: Finite Trace Inclusion and Safety Properties
       - `safety_finite_trace_equivalence`: Finite Trace Equivalence and Safety Properties
