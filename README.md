@@ -246,5 +246,5 @@ Implements transition systems and related concepts for modeling state-based syst
 ### Ambitious goals
 
 - Implementing (checked) algorithms for model-checking LT properties, with particular algorithms for invariant, safety, and liveness properties
-- Implementing an (checked) algorithm for model-checking LT Properties
+- Implementing an (checked) algorithm for model-checking LTL Formulae
 - Formalizing Büchi automata and proving regularity results
