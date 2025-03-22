@@ -130,6 +130,8 @@ Implements transition systems and related concepts for modeling state-based syst
   - `TracesFromStateWTS`: Set of (infinite) traces of (infinite) paths starting from a given state
   - `TracesFromInitialStateWTS`: Set of (infinite) traces of (infinite) paths starting from an initial state
   - `TracesWTS`: Set of (infinite) traces of (infinite) paths starting from initial states
+  - `PathToInfinitePathWTS`: Convert a PathFragment to an InfinitePathFragment
+  - `PathFromStateToInfinitePathWTS`: Convert a PathFragment starting from a given state to an InfinitePathFragment
 
 #### Theorems and Lemmas
 
@@ -222,6 +224,7 @@ Implements transition systems and related concepts for modeling state-based syst
     - `ltproperty_satisfaction_allPaths`: A transition system satisfies a property if the traces of all its paths are in the property
     - `trace_inclusion_and_LTProperties`: Trace Inclusion and LT Properties
     - `trace_equivalence_and_LTProperties`: Trace Equivalence and LT Properties
+    - `finite_trace_and_trace_equivalence`: (WIP) Finite Trace and Trace Inclusion
   - **Results for special kinds of LT properties**
     - **Invariants**
       - `invariant_satisfaction_reachability`: A system satisfies an invariant property iff all reachable states satisfy the invariant condition
@@ -238,7 +241,7 @@ Implements transition systems and related concepts for modeling state-based syst
 
 ### Planned goals
 
-- Proving a theorem about Relating Finite Trace and Trace Inclusion
+- Proving a theorem about Relating Finite Trace and Trace Inclusion (WIP)
 - Formalizing liveness properties and related results
 - Formalizing fairness and related results
 - Defining more derived operators for LTL, like release and weak until, and proving related results

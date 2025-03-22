@@ -20,7 +20,7 @@ namespace TransitionSystem
 /-!
 A finite transition system is a transition system where `S`, `Act`, and `AP` are finite sets.
 -/
-def isFinite (AP: Type) (TS : TransitionSystem AP) : Prop :=
+def isFinite {AP: Type} (TS : TransitionSystem AP) : Prop :=
   Nonempty (Fintype TS.S) ∧ Nonempty (Fintype TS.Act) ∧ Nonempty (Fintype AP)
 
 /-!
@@ -488,5 +488,26 @@ def TracesFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSw
 
 def TracesWTS {AP: Type} (TSwts: TransitionSystemWTS AP) : Set (InfiniteTrace AP) :=
   ⋃ s ∈ {s | TSwts.TS.I s}, TracesFromInitialStateWTS s (by assumption)
+
+def PathToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragment TSwts.TS) (h: π ∈ Paths TSwts.TS) : InfinitePathFragment TSwts.TS :=
+  match π with
+  | PathFragment.finite _ =>
+      False.elim (by
+        rw [Paths, Set.mem_setOf, isPath] at h
+        obtain ⟨_, h₂⟩ := h
+        rw [maximalIffInfinitePathFragment TSwts.h] at h₂
+        unfold isInfinitePathFragment at h₂
+        simp at h₂)
+  | PathFragment.infinite π' => π'
+
+def PathFromStateToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} {s: TSwts.TS.S} (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfinitePathFragment TSwts.TS :=
+  match π with
+  | PathFragment.finite _ => False.elim (by
+      rw [PathsFromState, Set.mem_setOf] at h
+      obtain ⟨h₁, _⟩ := h
+      rw [maximalIffInfinitePathFragment TSwts.h] at h₁
+      unfold isInfinitePathFragment at h₁
+      simp at h₁)
+  | PathFragment.infinite π' => π'
 
 end TransitionSystem

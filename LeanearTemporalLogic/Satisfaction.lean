@@ -1931,4 +1931,87 @@ theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : Transiti
       simp
     )
 
+theorem finite_trace_and_trace_equivalence {AP: Type} (TSwts : TransitionSystemWTS AP) (TS : TransitionSystem AP) (hfin : isFinite TS) : Traces TSwts.TS ⊆ Traces TS ↔ TracesFin TSwts.TS ⊆ TracesFin TS := by
+  unfold isFinite at hfin
+  constructor
+  · intro h
+    rw [finite_traces_are_prefixes]
+    intro t ht
+    unfold prefLTProperty at ht
+    simp at ht
+    obtain ⟨T, hT₁, hT₂⟩ := ht
+    let T' := Trace.infinite T
+    unfold TracesWTS at hT₁
+    rw [Set.mem_iUnion] at hT₁
+    simp at hT₁
+    obtain ⟨s, hs, hT₁⟩ := hT₁
+    have hT' : T' ∈ Traces TSwts.TS := by
+      unfold Traces TracesFromState
+      simp
+      use s, hs
+      unfold TraceFromPathFragmentSet
+      simp
+      unfold TracesFromInitialStateWTS at hT₁
+      simp at hT₁
+      obtain ⟨π, hπ, hT₁⟩ := hT₁
+      use π, hπ
+      unfold T' TraceFromPathFragment
+      match π with
+      | PathFragment.finite p =>
+        unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
+        simp at hπ
+        obtain ⟨hπ, _⟩ := hπ
+        obtain ⟨_, hTS⟩ := TSwts
+        specialize hTS (p.states (Fin.last p.n))
+        contradiction
+      | PathFragment.infinite p =>
+        simp
+        unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS at hT₁
+        simp at hT₁
+        assumption
+
+    apply h at hT'
+    unfold TracesFin TracesFinFromState
+    simp
+    unfold Traces TracesFromState at hT'
+    rw [Set.mem_iUnion] at hT'
+    simp at hT'
+    obtain ⟨s, hs, hT'⟩ := hT'
+    use s, hs
+
+    obtain ⟨π, hπ, hT'⟩ := hT'
+    unfold PathsFinFromState
+    simp
+    match π with
+    | PathFragment.finite p =>
+      unfold T' TraceFromPathFragment at hT'
+      simp at hT'
+    | PathFragment.infinite p =>
+      let πfin : FinitePathFragment TS := ⟨t.n, fun i => p.states i, by
+        intro i
+        have hv := p.valid i
+        simp
+        exact hv⟩
+      use πfin
+      unfold startStatePathFragment πfin
+      simp
+      constructor
+      · unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
+        simp at hπ
+        assumption
+      · unfold FiniteTraceFromFinitePathFragment
+        simp
+        unfold pref Prefix at hT₂
+        rw [Set.mem_def] at hT₂
+        obtain ⟨n, hT₂⟩ := hT₂
+        simp at hT₂
+        obtain ⟨hn, hf⟩ := hT₂
+        unfold T' TraceFromPathFragment InfiniteTraceFromInfinitePathFragment at hT'
+        simp at hT'
+        rw [hT'] at hf
+        rw [← hn] at hf
+        simp at hf
+        rw [← hf]
+  · sorry
+
 end section
