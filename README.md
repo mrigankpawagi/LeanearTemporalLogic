@@ -162,9 +162,13 @@ Implements transition systems and related concepts for modeling state-based syst
     - `Suffix.composition`: $\sigma[i\ldots][j\ldots] = \sigma[i+j\ldots]$
     - `Suffix.zero_identity`: $\sigma[0\ldots] = \sigma$
     - `prefix_monotonicity`: Prefixes of a set contains the prefixes of its subsets
+    - `closure_monotonicity`: Closure of a set contains the closure of its subsets
     - `finite_traces_are_prefixes`: Finite traces of a system are prefixes of its infinite traces
     - `closure_contains_property`: A property is contained in its closure
     - `prefix_of_closure_is_prefix`: Prefixes of a closure coincide with the prefixes of the original property
+    - `prefix_distributes_over_union`: Prefixes of a union of two sets coincide with the union of the prefixes of the sets
+    - `closure_distributes_over_union`: Closure of a union of two sets coincides with the union of the closures of the sets
+    - `closure_idempotent`: Closure of a closure is the closure itself
 
 - **Satisfaction of LTL Formulae by Worlds**:
   - $$\sigma \vDash \varphi$$: A world $$\sigma$$ satisfies an LTL formula $$\varphi$$
@@ -236,13 +240,16 @@ Implements transition systems and related concepts for modeling state-based syst
       - `safety_satisfaction`: A system satisfies a safety property if no bad prefix of the property is a finite trace of the system
       - `safety_finite_trace_inclusion`: Finite Trace Inclusion and Safety Properties
       - `safety_finite_trace_equivalence`: Finite Trace Equivalence and Safety Properties
+    - **Liveness Properties**
+      - `intersection_safety_liveness`: The only LT property that is both a safety and a liveness property is the trivial property
+      - `decomposition`: Any LT property can be decomposed into an intersection of a safety property and a liveness property
+      - `sharpest_decomposition`: The decomposition of a property into an intersection of its closure and its union with the complement of its closure is the sharpest decomposition into a safety and a liveness property
 
 ## Future Work
 
 ### Planned goals
 
 - Proving a theorem about Relating Finite Trace and Trace Inclusion (WIP)
-- Formalizing liveness properties and related results
 - Formalizing fairness and related results
 - Defining more derived operators for LTL, like release and weak until, and proving related results
 

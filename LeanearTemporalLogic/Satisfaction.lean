@@ -1520,6 +1520,12 @@ def closureLTProperty {AP: Type} (P: LTProperty AP) : Set (World AP) := {σ | pr
 
 instance {AP: Type} : HasSubset (LTProperty AP) := ⟨fun P Q ↦ ∀ σ, σ ∈ P → σ ∈ Q⟩
 
+instance {AP: Type} : Union (LTProperty AP) := ⟨fun P Q ↦ {σ | (σ ∈ P) ∨ (σ ∈ Q)}⟩
+
+instance {AP: Type} : Inter (LTProperty AP) := ⟨fun P Q ↦ {σ | (σ ∈ P) ∧ (σ ∈ Q)}⟩
+
+instance {AP: Type} : SDiff (LTProperty AP) := ⟨fun P Q ↦ {σ | (σ ∈ P) ∧ (σ ∉ Q)}⟩
+
 theorem closure_contains_property {AP: Type} (P: LTProperty AP) : P ⊆ (closureLTProperty P) := by
   rw [Set.subset_def]
   intro σ hσ
@@ -1862,6 +1868,227 @@ theorem prefix_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P�
   simp
   use σ
 
+theorem closure_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P₂ → closureLTProperty P₁ ⊆ closureLTProperty P₂ := by
+  intro h
+  unfold closureLTProperty
+  rw [Set.subset_def]
+  simp
+  intro σ hσ
+  rw [Set.subset_def]
+  rw [Set.subset_def] at hσ
+  have h' : prefLTProperty P₁ ⊆ prefLTProperty P₂ := by
+    apply prefix_monotonicity
+    assumption
+  intro ω hω
+  specialize hσ ω hω
+  apply h'
+  assumption
+
+theorem prefix_distributes_over_union {AP: Type} (P Q: LTProperty AP) : prefLTProperty (P ∪ Q) = prefLTProperty P ∪ prefLTProperty Q := by
+  rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+  constructor
+  · intro σ hσ
+    unfold prefLTProperty at hσ
+    rw [Set.mem_iUnion] at hσ
+    obtain ⟨σ', p, hσ⟩ := hσ
+    simp at hσ
+    rw [Set.union_def]
+    unfold prefLTProperty
+    simp
+    obtain ⟨hσ₁, hσ₂⟩ := hσ
+    obtain ⟨hσ₁, hσ₃⟩ := hσ₁
+    rw [← hσ₃] at hσ₂
+    rw [Set.mem_union] at hσ₁
+    cases hσ₁ with
+    | inl hl =>
+      left
+      use σ'
+    | inr hr =>
+      right
+      use σ'
+  · have h₁ : P ⊆ P ∪ Q := by
+      rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_union]
+      left
+      assumption
+    have h₂ : Q ⊆ P ∪ Q := by
+      rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_union]
+      right
+      assumption
+    have h₁' := prefix_monotonicity h₁
+    have h₂' := prefix_monotonicity h₂
+    intro σ' hσ'
+    rw [Set.mem_union] at hσ'
+    cases hσ' with
+    | inl _ =>
+      apply h₁'
+      assumption
+    | inr _ =>
+      apply h₂'
+      assumption
+
+theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closureLTProperty (P ∪ Q) = closureLTProperty P ∪ closureLTProperty Q := by
+  rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+  constructor
+  · intro σ hσ
+    unfold closureLTProperty at hσ
+    rw [Set.mem_def, Set.setOf_app_iff] at hσ
+    rw [prefix_distributes_over_union] at hσ
+
+    -- either pref(P) contains infinitely many prefixes of σ
+    -- or pref(Q) contains infinitely many prefixes of σ
+    have h : (∀ n, ∃ k > n, Prefix σ k ∈ prefLTProperty P) ∨ (∀ n, ∃ k > n, Prefix σ k ∈ prefLTProperty Q) := by
+      by_contra hc
+      simp [LTLFormula.Or.or] at hc
+      obtain ⟨h₁, h₂⟩ := hc
+
+      obtain ⟨n₁, h₁⟩ := h₁
+      obtain ⟨n₂, h₂⟩ := h₂
+      let n := n₁ + n₂ + 1
+      have hn₁ : n₁ < n := by
+        unfold n
+        rw [Nat.lt_add_one_iff]
+        simp
+      have hn₂ : n₂ < n := by
+        unfold n
+        rw [Nat.lt_add_one_iff]
+        simp
+      specialize h₁ n hn₁
+      specialize h₂ n hn₂
+
+      rw [Set.subset_def] at hσ
+      specialize hσ (Prefix σ n) (by
+        unfold pref
+        rw [Set.mem_def]
+        use n)
+
+      rw [Set.mem_union] at hσ
+      cases hσ <;> contradiction
+
+    have hyp (S: LTProperty AP) (hP: ∀ (n : ℕ), ∃ k > n, Prefix σ k ∈ prefLTProperty S) : pref σ ⊆ prefLTProperty S := by
+      rw [Set.subset_def]
+      by_contra hc
+      simp at hc
+      obtain ⟨ω, hω⟩ := hc
+      obtain ⟨hω₁, hω₂⟩ := hω
+      obtain ⟨n, f⟩ := ω
+
+      specialize hP n
+      obtain ⟨k, hk, hP⟩ := hP
+      unfold prefLTProperty at hP
+      rw [Set.mem_iUnion] at hP
+      simp at hP
+      obtain ⟨σ', hσ', hP⟩ := hP
+
+      unfold prefLTProperty at hω₂
+      rw [Set.mem_iUnion] at hω₂
+      simp at hω₂
+      specialize hω₂ σ' hσ'
+      unfold Prefix at hP
+
+      apply hω₂
+      unfold pref
+      rw [Set.mem_def]
+      use n
+      unfold Prefix
+      simp
+      funext i
+
+      unfold pref Prefix at hP
+      rw [Set.mem_def] at hP
+      simp at hP
+      rw [funext_iff] at hP
+      specialize hP i
+      simp at hP
+      rw [Nat.mod_eq_of_lt] at hP
+      rw [← hP]
+
+      unfold pref Prefix at hω₁
+      rw [Set.mem_def] at hω₁
+      simp at hω₁
+      rw [funext_iff] at hω₁
+      specialize hω₁ i
+      exact hω₁
+
+      simp at hk
+      rw [← Nat.add_one_lt_add_one_iff] at hk
+      have h'' : ↑i < n + 1 → ↑i < k + 1 := by
+        intro h
+        have h''' := Nat.lt_trans h hk
+        exact h'''
+
+      apply h''
+      simp
+
+    cases h with
+    | inl hP =>
+      rw [Set.mem_union]
+      left
+      let h' := hyp P hP
+      unfold closureLTProperty
+      simp
+      assumption
+    | inr hQ =>
+      rw [Set.mem_union]
+      right
+      let h' := hyp Q hQ
+      unfold closureLTProperty
+      simp
+      assumption
+  · have h₁ : P ⊆ P ∪ Q := by
+      rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_union]
+      left
+      assumption
+    have h₂ : Q ⊆ P ∪ Q := by
+      rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_union]
+      right
+      assumption
+    have h₁' := closure_monotonicity h₁
+    have h₂' := closure_monotonicity h₂
+    intro σ hσ
+    rw [Set.mem_union] at hσ
+    cases hσ with
+    | inl hσ' =>
+      apply h₁'
+      exact hσ'
+    | inr hσ' =>
+      apply h₂'
+      exact hσ'
+
+theorem closure_idempotent {AP: Type} (P: LTProperty AP) : closureLTProperty (closureLTProperty P) = closureLTProperty P := by
+  rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+  constructor
+  · intro σ hσ
+    unfold closureLTProperty at hσ
+    rw [Set.mem_def, Set.setOf_app_iff] at hσ
+    unfold closureLTProperty
+    rw [Set.mem_def, Set.setOf_app_iff]
+    rw [Set.subset_def] at hσ
+    intro ω hω
+    specialize hσ ω hω
+    unfold prefLTProperty at hσ
+    rw [Set.mem_iUnion] at hσ
+    simp at hσ
+    unfold prefLTProperty
+    rw [Set.mem_iUnion]
+    simp
+    obtain ⟨σ', hσ', hω'⟩ := hσ
+    rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def] at hσ'
+    specialize hσ' ω hω'
+    rw [Set.mem_iUnion] at hσ'
+    simp at hσ'
+    assumption
+  · intro σ hσ
+    apply closure_contains_property at hσ
+    assumption
+
 /-!
 Now we will prove a theorem about **Finite Trace Inclusion and Safety Properties**.
 -/
@@ -2022,6 +2249,319 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         rw [← hn] at hf
         simp at hf
         rw [← hf]
-  · sorry
+  · intro h
+    rw [Set.subset_def]
+    intro t ht
+    unfold Traces TracesFromState TraceFromPathFragmentSet PathsFromState at ht
+    simp at ht
+    obtain ⟨s, hs, ht⟩ := ht
+    obtain ⟨π, hπ, ht⟩ := ht
+    obtain ⟨hπmax, hπstart⟩ := hπ
+    unfold isMaximalPathFragment endStatePathFragment at hπmax
+    cases π with
+    | finite p =>
+      simp at hπmax
+      have hTS := TSwts.h
+      unfold hasNoTerminalStates at hTS
+      specialize hTS (p.states (Fin.last p.n))
+      contradiction
+    | infinite p =>
+      simp at hπmax
+      let T := InfiniteTraceFromInfinitePathFragment p
+
+      have hpref : ∀ q ∈ (pref T), ↑q ∈ TracesFin TS := by
+        intro q hq
+        apply h
+        rw [finite_traces_are_prefixes]
+        unfold prefLTProperty
+        simp
+        use T
+        constructor
+        · unfold TracesWTS TracesFromInitialStateWTS
+          rw [Set.mem_iUnion]
+          simp
+          use s, hs
+          use (PathFragment.infinite p)
+          unfold PathsFromState isMaximalPathFragment endStatePathFragment
+          simp
+          use hπstart
+          unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS
+          simp
+          unfold T
+          rfl
+        · simp [hq]
+
+      let finPath (m: ℕ) : FinitePathFragment TS := by
+        have mpref : ∃ q ∈ (pref T), (↑q ∈ TracesFin TS) ∧ (q.n = m) := by
+          let q : FiniteWorld AP := Prefix T m
+          have hq : q ∈ pref T := by
+            unfold pref
+            rw [Set.mem_def]
+            use m
+          specialize hpref q
+          use q
+          use hq
+          apply hpref at hq
+          use hq
+          unfold q Prefix
+          simp
+
+        let hq := mpref.choose_spec
+        let q := mpref.choose
+        obtain ⟨hq₁, hq₂, hq₃⟩ := hq
+
+        unfold TracesFin TracesFinFromState at hq₂
+        simp at hq₂
+        let hq₂' := hq₂.choose_spec
+        obtain ⟨hq₂₁, hq₂₂⟩ := hq₂'
+        let path := hq₂₂.choose
+        let hpath := hq₂₂.choose_spec
+
+        exact path
+
+      let finPathState m n : TS.S := (finPath m).states n
+
+      let proofStructure (n : ℕ) : ftti_ProofStructure n :=
+        match n with
+        | 0 => by
+          have hm : ∃ m, ∀ k, ∃ j > k, (finPathState m 0) = (finPathState j 0) := by
+            by_contra hc
+            simp at hc
+            obtain ⟨hfin, _, _⟩ := hfin
+            let ⟨Selems, Scomplete⟩ := hfin
+
+            let getLimit : ℕ → ℕ := fun n => by
+              specialize hc n
+              let lim := hc.choose
+              let hlim := hc.choose_spec
+              exact lim
+
+            let getLimitFromState : TS.S → Finset ℕ := fun s => by
+              if hs: ∃ m, s = finPathState m 0 then
+                let m := hs.choose
+                exact { getLimit m }
+              else
+                exact ∅
+
+            let limits : Set ℕ := ⋃ s ∈ Selems, getLimitFromState s
+
+            -- find the maximum value in limits
+            sorry
+
+          let m := hm.choose
+          let hm' := hm.choose_spec
+          let s₀ := finPathState m 0
+          let I := {j | s₀ = finPathState j 0}
+
+          exact ⟨
+            by
+              sorry,
+            fun k => I,
+            fun k => s₀,
+            by simp,
+            by
+              sorry,
+            by
+              sorry⟩
+        | k + 1 => sorry
+
+      sorry
+
+
+/-!
+We will now define **Liveness** properties.
+-/
+def isLivenessProperty {AP: Type} (P: LTProperty AP) : Prop := prefLTProperty P = {ω | ω : FiniteWorld AP}
+
+/-!
+The only LT property over AP that is both a safety and a liveness property is (2^AP)^ω.
+-/
+theorem intersection_safety_liveness {AP: Type} (P: LTProperty AP) : isSafetyProperty P ∧ isLivenessProperty P → P = {σ | σ : World AP} := by
+  intro h
+  obtain ⟨hsafe, hlive⟩ := h
+  unfold isLivenessProperty at hlive
+  rw [safety_closure] at hsafe
+  rw [← hsafe]
+  unfold closureLTProperty
+  rw [hlive]
+  simp
+
+/-!
+Any LT property can be decomposed into a safety and a liveness property.
+-/
+theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTProperty AP), isSafetyProperty Psafe ∧ isLivenessProperty Plive ∧ P = Psafe ∩ Plive := by
+  have h₁ : P = (closureLTProperty P) ∩ P := by
+    rw [Set.Subset.antisymm_iff]
+    constructor
+    · rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_inter_iff]
+      constructor
+      · apply closure_contains_property at hσ
+        assumption
+      · assumption
+    · rw [Set.subset_def]
+      intro σ hσ
+      rw [Set.mem_inter_iff] at hσ
+      obtain ⟨hσ₁, hσ₂⟩ := hσ
+      assumption
+
+  have hsafe : isSafetyProperty (closureLTProperty P) := by
+    rw [safety_closure, closure_idempotent]
+
+  have h₂ : P = (closureLTProperty P) ∩ (P ∪ ({σ | σ : World AP} \ closureLTProperty P)) := by
+    rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+    constructor
+    · intro σ hσ
+      rw [Set.mem_inter_iff]
+      constructor
+      · rw [h₁] at hσ
+        rw [Set.mem_inter_iff] at hσ
+        obtain ⟨hσ₁, hσ₂⟩ := hσ
+        assumption
+      · rw [Set.mem_union]
+        left
+        assumption
+    · intro σ hσ
+      rw [Set.mem_inter_iff] at hσ
+      obtain ⟨hσ₁, hσ₂⟩ := hσ
+      rw [h₁]
+      rw [Set.mem_inter_iff]
+      simp [hσ₁]
+      rw [Set.mem_union] at hσ₂
+      cases hσ₂ with
+      | inl hl => assumption
+      | inr hr =>
+        rw [Set.mem_diff] at hr
+        obtain ⟨_, hr⟩ := hr
+        contradiction
+
+  let Plive := (P ∪ ({σ | σ : World AP} \ closureLTProperty P))
+
+  have hlive : isLivenessProperty Plive := by
+    unfold isLivenessProperty
+
+    have hcl : closureLTProperty Plive = {ω | ω : World AP} := by
+      unfold Plive
+      rw [closure_distributes_over_union]
+      rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+      simp
+      intro σ
+      if hσ: σ ∈ closureLTProperty P then
+        left
+        assumption
+      else
+        right
+        apply closure_contains_property
+        rw [Set.mem_diff]
+        simp
+        assumption
+
+    unfold closureLTProperty at hcl
+    rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def] at hcl
+    simp at hcl
+    rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
+    simp
+    intro ω
+
+    let σ : World AP := fun i => if i < ω.n + 1 then ω.f i else ω.f (ω.n - 1)
+    specialize hcl σ
+    apply hcl
+    unfold pref
+    rw [Set.mem_def]
+    use ω.n
+    unfold Prefix
+    obtain ⟨n, f⟩ := ω
+    simp
+    funext i
+    unfold σ
+    simp
+
+  use closureLTProperty P, Plive, hsafe, hlive
+  apply h₂
+
+
+/-!
+The above is in fact the *sharpest* decomposition.
+-/
+theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive : LTProperty AP), isSafetyProperty Psafe ∧ isLivenessProperty Plive ∧ P = Psafe ∩ Plive → (closureLTProperty P ⊆ Psafe) ∧ Plive ⊆ P ∪ ({σ | σ : World AP} \ closureLTProperty P) := by
+  intro Psafe Plive h
+  obtain ⟨hsafe, hlive, h⟩ := h
+  constructor
+  · rw [Set.subset_def]
+    intro σ hσ
+    unfold isSafetyProperty at hsafe
+    unfold closureLTProperty prefLTProperty at hσ
+    rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def] at hσ
+    by_contra hc
+    specialize hsafe σ hc
+    obtain ⟨n, hsafe⟩ := hsafe
+    specialize hσ (Prefix σ n) (by
+      unfold pref
+      rw [Set.mem_def]
+      use n)
+    rw [Set.mem_iUnion] at hσ
+    simp at hσ
+    obtain ⟨σ', hσ', hσ⟩ := hσ
+    rw [h] at hσ'
+    rw [Set.mem_inter_iff] at hσ'
+    obtain ⟨hσ', _⟩ := hσ'
+    specialize hsafe σ'
+    apply hsafe
+    unfold pref at hσ
+    rw [Set.mem_def] at hσ
+    obtain ⟨n', hσ⟩ := hσ
+    rw [hσ]
+    unfold Prefix
+    simp
+    unfold Prefix at hσ
+    simp at hσ
+    obtain ⟨hσ₁, hσ₂⟩ := hσ
+    simp [hσ₁]
+    rw [hσ₁]
+    assumption
+  · unfold isLivenessProperty at hlive
+    rw [Set.subset_def]
+    intro σ hσ
+    if hp: σ ∈ P then
+      left
+      assumption
+    else
+      right
+      rw [Set.mem_diff]
+      simp
+      unfold closureLTProperty prefLTProperty
+      rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def]
+      simp
+      rw [h, Set.mem_inter_iff] at hp
+      simp at hp
+      simp [hσ] at hp
+      unfold isSafetyProperty at hsafe
+      specialize hsafe σ hp
+      obtain ⟨n, hsafe⟩ := hsafe
+      use (Prefix σ n)
+      constructor
+      · unfold pref
+        rw [Set.mem_def]
+        use n
+      · intro σ' hσ'
+        unfold pref Prefix
+        rw [Set.mem_def]
+        simp
+        rw [funext_iff]
+        by_contra hc
+        specialize hsafe σ'
+
+        have h' : Prefix σ' n = Prefix σ n := by
+          unfold Prefix
+          simp
+          funext i
+          specialize hc i
+          simp [hc]
+
+        apply hsafe at h'
+        rw [h, Set.mem_inter_iff] at hσ'
+        obtain ⟨hσ₁, hσ₂⟩ := hσ'
+        contradiction
 
 end section
