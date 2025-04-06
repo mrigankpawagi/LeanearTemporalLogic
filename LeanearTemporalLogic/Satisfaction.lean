@@ -222,6 +222,46 @@ theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFo
     rw [Suffix.composition]
     assumption
 
+theorem world_satisfies_weakuntil {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓦 ϕ₂)) ↔ ((σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ∨ (σ ⊨ (□ ϕ₁))) := by
+  rw [weakuntil]
+  rw [world_satisfies_or]
+
+theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (σ : World AP) (h: ∃ (x : ℕ), Suffix σ x ⊨ ϕ) : ∃ x, (Suffix σ x ⊨ ϕ) ∧ (∀ y < x, ¬ (Suffix σ y ⊨ ϕ)) := by
+  by_contra hc
+  simp [And.and] at hc
+  have h'' (x : ℕ): ∀ k ≤ x, Suffix σ k ⊨ (¬ ϕ) := by
+    induction x with
+    | zero =>
+      intro k hk
+      simp at hk
+      rw [hk]
+      specialize hc 0
+      simp [Not.not] at hc
+      assumption
+    | succ n ih =>
+      intro k hk
+      by_contra hc'
+      specialize hc k
+      rw [world_satisfies_negation] at hc'
+      simp [Not.not] at hc hc'
+      apply hc at hc'
+      obtain ⟨i, hi, hc'⟩ := hc'
+      have hi' : i ≤ n := by
+        rw [Nat.lt_iff_add_one_le] at hi
+        have hi'' : i + 1 ≤ n + 1 := Nat.le_trans hi hk
+        rw [Nat.add_le_add_iff_right] at hi''
+        assumption
+
+      specialize ih i hi'
+      contradiction
+
+  have h''' (x : ℕ) : Suffix σ x ⊨ (¬ ϕ) := by
+    specialize h'' x x (by simp)
+    assumption
+
+  obtain ⟨i, hi⟩ := h
+  specialize h''' i
+  contradiction
 
 /-!
 We now define the set of worlds that satisfy a given LTL formula.
@@ -405,6 +445,275 @@ theorem ltl_duality_always {AP: Type} (ϕ : LTLFormula AP) : ((¬ (□ ϕ)) ≡ 
   have h₅ : (¬ (¬ ♢ (¬ ϕ))) ≡ (♢ (¬ ϕ)) := ltl_double_negation _
   have h₆ : (¬ (□ ϕ)) ≡ (♢ (¬ ϕ)) := equivalent_ltl_trans _ _ _ h₄ h₅
   assumption
+
+theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓦 ((¬ ϕ) ∧ (¬ ψ))) := by
+  simp only [Equivalent.Equiv]
+  funext σ
+  simp only [Worlds]
+  rw [propext_iff, world_satisfies_weakuntil]
+  constructor
+  · intro h
+    rw [world_satisfies_negation, world_satisfies_until] at h
+    simp [Not.not] at h
+
+    if h₁ : ∀ x, ¬ (Suffix σ x ⊨ ψ) then
+      if h₂ : ∀ x, Suffix σ x ⊨ ϕ then
+        right
+        rw [world_satisfies_always]
+        intro i
+        specialize h₁ i
+        specialize h₂ i
+        rw [world_satisfies_and, world_satisfies_negation]
+        constructor <;> assumption
+      else
+        left
+        have h' := satisfies_for_first_time_iff_satisfies (¬ ϕ) σ (by
+          simp at h₂
+          obtain ⟨i, hi⟩ := h₂
+          use i
+          rw [world_satisfies_negation]
+          simp [Not.not]
+          assumption)
+        obtain ⟨i, hi⟩ := h'
+        obtain ⟨hl, hr⟩ := hi
+        rw [world_satisfies_negation] at hl
+        simp [Not.not] at hl
+        rw [world_satisfies_until]
+        use i
+        rw [world_satisfies_and, world_satisfies_negation]
+        constructor
+        · constructor
+          · simp only [Not.not]
+            assumption
+          · rw [world_satisfies_negation]
+            specialize h₁ i
+            assumption
+        · intro k hk
+          specialize hr k hk
+          specialize h₁ k
+          rw [world_satisfies_negation] at hr
+          simp [Not.not] at hr
+          rw [world_satisfies_and, world_satisfies_negation]
+          constructor <;> assumption
+    else
+      left
+      have h₁' : ¬∀ (x : ℕ), Suffix σ x ⊨ (¬ ψ) := by
+        simp [Not.not] at h₁
+        obtain ⟨i, hi⟩ := h₁
+        simp [Not.not]
+        use i
+        simp [Satisfaction.Satisfies]
+        unfold world_satisfies_ltl
+        simp [Not.not]
+        simp [Satisfaction.Satisfies] at hi
+        assumption
+      have h' := satisfies_for_first_time_iff_satisfies ψ σ (by
+        simp [Not.not, Satisfaction.Satisfies] at h₁'
+        obtain ⟨i, hi⟩ := h₁'
+        use i
+        simp [Satisfaction.Satisfies]
+        rw [world_satisfies_ltl] at hi
+        simp [Not.not] at hi
+        assumption)
+      obtain ⟨i, hi⟩ := h'
+      obtain ⟨hl, hr⟩ := hi
+      specialize h i
+      simp [And.and] at h
+      apply h at hl
+      obtain ⟨j, hj, hl⟩ := hl
+      have hl' : ¬∀ (k : ℕ), Suffix σ k ⊨ ϕ := by
+        by_contra hc
+        simp [Not.not] at hc
+        specialize hc j
+        contradiction
+      have h'' := satisfies_for_first_time_iff_satisfies (¬ ϕ) σ (by
+        simp [Not.not] at hl'
+        obtain ⟨i, hi⟩ := hl'
+        use i
+        rw [world_satisfies_negation]
+        simp [Not.not]
+        assumption)
+      obtain ⟨k, hk⟩ := h''
+      rw [world_satisfies_until]
+      use k
+      have hk' : k < i := by
+        have hkh : k ≤ j := by
+          by_contra hc
+          simp at hc
+          obtain ⟨_, hk⟩ := hk
+          specialize hk j hc
+          contradiction
+        apply Nat.lt_of_le_of_lt hkh hj
+      let hr' := hr
+      specialize hr k hk'
+      obtain ⟨hkl, hkr⟩ := hk
+      rw [world_satisfies_negation] at hkl
+      simp [Not.not] at hr hkl
+      constructor
+      · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+        simp [Not.not]
+        constructor <;> assumption
+      · intro m hm
+        specialize hkr m hm
+        rw [world_satisfies_and]
+        have hmi : m < i := Nat.lt_trans hm hk'
+        specialize hr' m hmi
+        rw [world_satisfies_negation]
+        rw [world_satisfies_negation] at hkr
+        simp [Not.not] at hkr
+        constructor <;> assumption
+  · intro h
+    rw [world_satisfies_negation, world_satisfies_until]
+    simp [Not.not, And.and]
+    cases h with
+    | inl hl =>
+      intro i hi
+      rw [world_satisfies_until] at hl
+      obtain ⟨j, hj, hl⟩ := hl
+      if h' : j < i then
+        use j, h'
+        rw [world_satisfies_and, world_satisfies_negation] at hj
+        obtain ⟨hjl, hjr⟩ := hj
+        simp [Not.not] at hjl
+        assumption
+      else
+        simp at h'
+        rw [Nat.le_iff_lt_or_eq] at h'
+        cases h' with
+        | inl hl' =>
+          specialize hl i hl'
+          rw [world_satisfies_and, world_satisfies_negation] at hl
+          obtain ⟨hll, hlr⟩ := hl
+          simp [Not.not] at hlr
+          contradiction
+        | inr hr' =>
+          rw [hr'] at hi
+          rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
+          obtain ⟨hjl, hjr⟩ := hj
+          simp [Not.not] at hjr
+          contradiction
+    | inr hr =>
+      intro i hi
+      rw [world_satisfies_always] at hr
+      specialize hr i
+      rw [world_satisfies_and] at hr
+      simp only [And.and] at hr
+      obtain ⟨hrl, hrr⟩ := hr
+      rw [world_satisfies_negation] at hrr
+      simp [Not.not] at hrr
+      contradiction
+
+theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ))) := by
+  rw [equivalent_ltl_preserves_negation]
+  have h₁ : (¬ (¬ (ϕ 𝓦 ψ))) ≡ (ϕ 𝓦 ψ) := ltl_double_negation (ϕ 𝓦 ψ)
+  have h₂ : (ϕ 𝓦 ψ) ≡ (¬ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ)))) := by
+    have h₃ := equivalent_ltl_symm _ _ (ltl_duality_until (ϕ ∧ (¬ ψ)) ((¬ ϕ) ∧ (¬ ψ)))
+    have h₄ : (ϕ 𝓦 ψ) ≡ (((ϕ ∧ (¬ ψ)) ∧ (¬ (¬ ϕ) ∧ (¬ ψ))) 𝓦 (¬ ϕ ∧ (¬ ψ)) ∧ (¬ (¬ ϕ) ∧ (¬ ψ))) := by
+      simp only [Equivalent.Equiv]
+      funext σ
+      simp only [Worlds]
+      rw [propext_iff]
+      repeat rw [world_satisfies_weakuntil]
+      rw [world_satisfies_until]
+      constructor
+      · intro h
+        simp [Or.or] at h
+        cases h with
+        | inl hl =>
+          left
+          obtain ⟨j, hj, hl⟩ := hl
+          have h' := satisfies_for_first_time_iff_satisfies ψ σ (by use j)
+          obtain ⟨i, hi⟩ := h'
+          obtain ⟨hil, hir⟩ := hi
+          rw [world_satisfies_until]
+          use i
+          constructor
+          · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            simp [Not.not, And.and]
+            assumption
+          · intro k hk
+            specialize hl k (by
+              by_contra hc
+              simp at hc
+              have hjj : j < i := Nat.lt_of_le_of_lt hc hk
+              specialize hir j hjj
+              simp [Not.not] at hir
+              contradiction)
+            specialize hir k hk
+            simp [Not.not] at hir
+            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            simp [Not.not, And.and]
+            constructor
+            · constructor <;> assumption
+            · simp [hl]
+        | inr hr =>
+          if h' : ∀ x, ¬ (Suffix σ x ⊨ ψ) then
+            right
+            rw [world_satisfies_always]
+            intro i
+            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            simp [Not.not, And.and]
+            specialize h' i
+            simp [Not.not] at h'
+            rw [world_satisfies_always] at hr
+            specialize hr i
+            constructor
+            · constructor <;> assumption
+            · simp [hr]
+          else
+            left
+            simp [Not.not] at h'
+            have h'' := satisfies_for_first_time_iff_satisfies ψ σ h'
+            rw [world_satisfies_until]
+            obtain ⟨i, hi⟩ := h''
+            obtain ⟨hil, hir⟩ := hi
+            use i
+            constructor
+            · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+              simp [Not.not, And.and]
+              assumption
+            · intro k hk
+              rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+              simp [Not.not, And.and]
+              specialize hir k hk
+              simp [Not.not] at hir
+              rw [world_satisfies_always] at hr
+              specialize hr k
+              constructor
+              · constructor <;> assumption
+              · simp [hr]
+      · intro h
+        simp only [Or.or] at h
+        cases h with
+        | inl hl =>
+          left
+          rw [world_satisfies_until] at hl
+          obtain ⟨j, hj, hl⟩ := hl
+          use j
+          constructor
+          · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
+            simp [Not.not, And.and] at hj
+            assumption
+          · intro k hk
+            specialize hl k hk
+            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hl
+            simp [Not.not, And.and] at hl
+            obtain ⟨hl₁, hl₂⟩ := hl
+            obtain ⟨hl₁l, hl₁r⟩ := hl₁
+            assumption
+        | inr hr =>
+          right
+          rw [world_satisfies_always]
+          intro i
+          rw [world_satisfies_always] at hr
+          specialize hr i
+          rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hr
+          simp [Not.not, And.and] at hr
+          obtain ⟨hrl, hrr⟩ := hr
+          obtain ⟨hrll, hrlr⟩ := hrl
+          assumption
+    apply equivalent_ltl_trans _ _ _ h₄ h₃
+  apply equivalent_ltl_trans _ _ _ h₁ h₂
 
 theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ ϕ)) ≡ (♢ ϕ) := by
   simp [Equivalent.Equiv]

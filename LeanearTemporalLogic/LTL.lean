@@ -127,6 +127,10 @@ def False {AP: Type} : LTLFormula AP := not True
 notation "⊤" => True
 notation "⊥" => False
 
+-- Weak Until
+-- `ϕ 𝓦 ψ` for `weakuntil ϕ ψ`
+def weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : LTLFormula AP := (ϕ 𝓤 ψ) ∨ (□ ϕ)
+infixl:50 (priority := high) " 𝓦 " => weakuntil
 
 /-!
 The *length* of a formula is the number of operators in it. We count only the basic operators.

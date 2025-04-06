@@ -41,6 +41,7 @@ Implements the syntax of Linear Temporal Logic with basic and derived operators.
   - `eventually φ` ($$\diamondsuit\varphi$$)
   - `always φ` ($$\square\varphi$$)
   - `False` ($$\bot$$)
+  - `weakuntil` ($$\varphi \mathcal{W} \psi$$)
 
 Propositional Logic (PL) formulas are defined as a subset of LTL formulas without temporal operators. This module provides appropriate syntactic or notational sugar to make it easier to write LTL formulas
 
@@ -183,6 +184,8 @@ Implements transition systems and related concepts for modeling state-based syst
     - `world_satisfies_always`: $$(σ ⊨ (□ ϕ)) ↔ ∀ i, ((σ[i…]) ⊨ ϕ)$$
     - `world_satisfies_always_eventually`: $$(σ ⊨ (□ ♢ ϕ)) ↔ ∀ i, ∃ j, ((σ[i+j…]) ⊨ ϕ)$$
     - `world_satisfies_eventually_always`: $$(σ ⊨ (♢ □ ϕ)) ↔ ∃ i, ∀ j, ((σ[i+j…]) ⊨ ϕ)$$
+    - `world_satisfies_weakuntil`: $$(σ ⊨ (ϕ₁ 𝓦 ϕ₂)) ↔ ((σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ∨ (σ ⊨ (□ ϕ₁)))$$
+    - `satisfies_for_first_time_iff_satisfies`: If a world satisfies an LTL formula, it satisfies it for the first time at some index
   - `Worlds`: Maps an LTL formula to the set of worlds that satisfy it
 
 - **Equivalence of LTL Formulae**:
@@ -196,6 +199,8 @@ Implements transition systems and related concepts for modeling state-based syst
       - `ltl_duality_next`: $$(¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))$$
       - `ltl_duality_eventually`: $$(¬ (♢ ϕ)) ≡ (□ (¬ ϕ))$$
       - `ltl_duality_always`: $$(¬ (□ ϕ)) ≡ (♢ (¬ ϕ))$$
+      - `ltl_duality_until` : $$(¬ (ϕ 𝓤 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓦 ((¬ ϕ) ∧ (¬ ψ)))$$
+      - `ltl_duality_weakuntil`: $$(¬ (ϕ 𝓦 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ)))$$
     - **Idempotence**
       - `ltl_idempotence_eventually`: $$(♢ (♢ ϕ)) ≡ (♢ ϕ)$$
       - `ltl_idempotence_always`: $$(□ (□ ϕ)) ≡ (□ ϕ)$$
@@ -251,7 +256,8 @@ Implements transition systems and related concepts for modeling state-based syst
 
 - Proving a theorem about Relating Finite Trace and Trace Inclusion (WIP)
 - Formalizing fairness and related results
-- Defining more derived operators for LTL, like release and weak until, and proving related results
+- Formalizing results about Weak Until (WIP)
+- Formalizing results about Positive Normal Form
 
 ### Ambitious goals
 
