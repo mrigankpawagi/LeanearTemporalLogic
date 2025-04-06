@@ -1931,7 +1931,17 @@ theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : Transiti
       simp
     )
 
-theorem finite_trace_and_trace_equivalence {AP: Type} (TSwts : TransitionSystemWTS AP) (TS : TransitionSystem AP) (hfin : isFinite TS) : Traces TSwts.TS ⊆ Traces TS ↔ TracesFin TSwts.TS ⊆ TracesFin TS := by
+
+structure ftti_ProofStructure {AP: Type} {TS : TransitionSystem AP} (n : ℕ) where
+  f : (m : ℕ) → (Fin (m + 1))  → TS.S
+  Iseq : Fin (n + 1) → Set ℕ
+  Sseq : Fin (n + 1) → TS.S
+  h₁: ∀ (k : Fin n), Iseq (k + 1) ⊆ Iseq k
+  h₂: ∃ (p : FinitePathFragment TS), ((PathFragment.finite p) ∈ PathsFin TS) ∧ (p.n = n) ∧ (∀ i, p.states i = Sseq i)
+  h₃: ∀ m ∈ Iseq n, ∀ (i : Fin (n + 1)), f m i = Sseq i
+
+
+theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS AP) (TS : TransitionSystem AP) (hfin : isFinite TS) : Traces TSwts.TS ⊆ Traces TS ↔ TracesFin TSwts.TS ⊆ TracesFin TS := by
   unfold isFinite at hfin
   constructor
   · intro h

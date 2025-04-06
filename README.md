@@ -224,7 +224,7 @@ Implements transition systems and related concepts for modeling state-based syst
     - `ltproperty_satisfaction_allPaths`: A transition system satisfies a property if the traces of all its paths are in the property
     - `trace_inclusion_and_LTProperties`: Trace Inclusion and LT Properties
     - `trace_equivalence_and_LTProperties`: Trace Equivalence and LT Properties
-    - `finite_trace_and_trace_equivalence`: (WIP) Finite Trace and Trace Inclusion
+    - `finite_trace_and_trace_inclusion`: (WIP) Finite Trace and Trace Inclusion
   - **Results for special kinds of LT properties**
     - **Invariants**
       - `invariant_satisfaction_reachability`: A system satisfies an invariant property iff all reachable states satisfy the invariant condition
