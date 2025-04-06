@@ -258,3 +258,9 @@ Implements transition systems and related concepts for modeling state-based syst
 - Implementing (checked) algorithms for model-checking LT properties, with particular algorithms for invariant, safety, and liveness properties
 - Implementing an (checked) algorithm for model-checking LTL Formulae
 - Formalizing Büchi automata and proving regularity results
+
+### Quality goals
+
+- Replace `simp` tactics with `simp only` except when closing the goal
+- Replace structures with special properties by inherited structures (e.g., `TransitionSystemWTS`)
+- Create type classes for overloaded operations like `Post`, `Pre`, `pref`, etc.
