@@ -1,6 +1,6 @@
 # LeanearTemporalLogic
 
-This is a formalization of Linear Temporal Logic (LTL) in the Lean 4 theorem prover. The project implements the syntax and semantics of LTL, transition systems, and provides various lemmae and theorems about LTL and LT properties.
+This is a formalization of Linear Temporal Logic (LTL) in the Lean 4 theorem prover. The project implements the syntax and semantics of LTL, transition systems, and provides various lemmas and theorems about LTL and LT properties.
 
 > [!NOTE]
 > This project is a work in progress and may not be ready for use as a dependency. Contributions and feedback are welcome!
@@ -159,7 +159,7 @@ Implements transition systems and related concepts for modeling state-based syst
   - `pref`: Function that returns the set of all prefixes of a world
   - `prefLTProperty`: Set of all prefixes of traces in an LT property
   - `closureLTProperty`: Closure of an LT property
-  - **Some useful lemmae**
+  - **Some useful lemmas**
     - `Suffix.composition`: $\sigma[i\ldots][j\ldots] = \sigma[i+j\ldots]$
     - `Suffix.zero_identity`: $\sigma[0\ldots] = \sigma$
     - `prefix_monotonicity`: Prefixes of a set contains the prefixes of its subsets
@@ -231,7 +231,7 @@ Implements transition systems and related concepts for modeling state-based syst
 - **Satisfaction of LT Properties by Transition Systems**:
   - $$TS \vDash P$$: A transition system satisfies an LT property
   - $$TSwts \vDash P$$: A transition system without terminal states satisfies an LT property
-  - **Auxiliary Lemmae and Theorems**
+  - **Auxiliary Lemmas and Theorems**
     - `ltproperty_satisfaction_allPaths`: A transition system satisfies a property if the traces of all its paths are in the property
     - `trace_inclusion_and_LTProperties`: Trace Inclusion and LT Properties
     - `trace_equivalence_and_LTProperties`: Trace Equivalence and LT Properties
@@ -240,7 +240,7 @@ Implements transition systems and related concepts for modeling state-based syst
     - **Invariants**
       - `invariant_satisfaction_reachability`: A system satisfies an invariant property iff all reachable states satisfy the invariant condition
     - **Safety Properties**
-      - **Additional Structures and Lemmae**
+      - **Additional Structures and Lemmas**
         - `BadPref`, `MinBadPref`: Sets of all bad prefixes and minimal bad prefixes for a property
         - `safety_closure`: A property is a safety property iff it equals its closure
         - `closure_of_traces`: The closure of a system's traces is a safety property that the system satisfies

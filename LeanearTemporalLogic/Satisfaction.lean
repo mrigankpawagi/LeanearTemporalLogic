@@ -1248,7 +1248,7 @@ theorem ltl_distributive_always_and {AP: Type} (ϕ ψ : LTLFormula AP) : (□ (�
 
 
 /-!
-Now we prove the lemmae that "Until is the Least Solution of the Expansion Law" and
+Now we prove the lemmas that "Until is the Least Solution of the Expansion Law" and
 "Weak Until is the Greatest Solution of the Expansion Law".
 -/
 def solution_of_expansion_law_lower {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
