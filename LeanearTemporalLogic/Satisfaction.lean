@@ -984,6 +984,85 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
             rw [Nat.add_comm]
             assumption
 
+theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓦 ψ)))) := by
+  simp only [Equivalent.Equiv]
+  funext σ
+  simp only [Worlds]
+  rw [propext_iff]
+  rw [world_satisfies_weakuntil, world_satisfies_or, world_satisfies_and, world_satisfies_next, world_satisfies_weakuntil]
+  simp [And.and, Or.or, Not.not]
+
+  have huntil := ltl_expansion_until ϕ ψ
+  simp only [Equivalent.Equiv] at huntil
+  rw [funext_iff] at huntil
+  specialize huntil σ
+  simp only [Worlds] at huntil
+
+  constructor
+  · intro h
+    cases h with
+    | inl h =>
+      rw [huntil] at h
+      rw [world_satisfies_or, world_satisfies_and, world_satisfies_next] at h
+      simp only [And.and, Or.or] at h
+      cases h with
+      | inl h =>
+        left
+        assumption
+      | inr h =>
+        right
+        obtain ⟨hl, hr⟩ := h
+        constructor
+        · assumption
+        · left
+          assumption
+    | inr h =>
+      right
+      rw [world_satisfies_always] at h
+      constructor
+      . specialize h 0
+        rw [Suffix.zero_identity] at h
+        assumption
+      . right
+        rw [world_satisfies_always]
+        intro i
+        specialize h (i + 1)
+        rw [Suffix.composition]
+        rw [Nat.add_comm]
+        assumption
+  · intro h
+    cases h with
+    | inl h =>
+      left
+      rw [huntil]
+      rw [world_satisfies_or, world_satisfies_and, world_satisfies_next]
+      left
+      assumption
+    | inr h =>
+      obtain ⟨hl, hr⟩ := h
+      cases hr with
+      | inl h =>
+        left
+        rw [huntil]
+        rw [world_satisfies_or, world_satisfies_and, world_satisfies_next]
+        simp only [And.and, Or.or]
+        right
+        constructor <;> assumption
+      | inr h =>
+        right
+        rw [world_satisfies_always] at h
+        rw [world_satisfies_always]
+        intro i
+        cases c: i with
+        | zero =>
+          rw [Suffix.zero_identity]
+          assumption
+        | succ n =>
+          specialize h n
+          rw [Suffix.composition] at h
+          rw [Nat.add_comm] at h
+          assumption
+
 theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1169,12 +1248,15 @@ theorem ltl_distributive_always_and {AP: Type} (ϕ ψ : LTLFormula AP) : (□ (�
 
 
 /-!
-Now we prove the lemma that "Until is the Least Solution of the Expansion Law"
+Now we prove the lemmae that "Until is the Least Solution of the Expansion Law" and
+"Weak Until is the Greatest Solution of the Expansion Law".
 -/
-def solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
+def solution_of_expansion_law_lower {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
 
-theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
-  unfold solution_of_expansion_law
+def solution_of_expansion_law_upper {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := P ⊆ (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P})
+
+theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_lower ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law_lower ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
+  unfold solution_of_expansion_law_lower
   unfold Worlds
   simp
   constructor
@@ -1276,6 +1358,115 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
 
     rw [Suffix.zero_identity] at h₀
     assumption
+
+
+theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_upper ϕ ψ (Worlds (ϕ 𝓦 ψ))) ∧ (∀ P, (solution_of_expansion_law_upper ϕ ψ P) → P ⊆ Worlds (ϕ 𝓦 ψ)) := by
+  unfold solution_of_expansion_law_upper Worlds
+  simp [And.and]
+
+  have hwu := ltl_expansion_weakuntil ϕ ψ
+  simp only [Equivalent.Equiv] at hwu
+  rw [funext_iff] at hwu
+
+  constructor
+
+  -- we first show that it is indeed a solution
+  · rw [Set.subset_def]
+    intro σ hσ
+    rw [Set.mem_def] at hσ
+    rw [Set.union_def, Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def]
+    specialize hwu σ
+    simp only [Worlds] at hwu
+    rw [hwu] at hσ
+    rw [world_satisfies_or, world_satisfies_and, world_satisfies_next] at hσ
+    simp only [And.and, Or.or] at hσ
+    assumption
+
+  -- now we show that it is the greatest solution
+  · intro P h
+    rw [Set.subset_def, Set.union_def] at h
+    rw [Set.subset_def]
+    intro σ hσ
+    rw [Set.mem_def]
+    rw [world_satisfies_weakuntil, world_satisfies_until, world_satisfies_always]
+
+    if hψ : ∀ i, ¬ (Suffix σ i ⊨ ψ) then
+      let h' (i : ℕ) : (Suffix σ i ⊨ ϕ) ∧ (Suffix σ (i + 1) ∈ P) := by
+        induction i with
+        | zero =>
+          specialize h σ hσ
+          specialize hψ 0
+          rw [Suffix.zero_identity] at hψ
+          rw [Suffix.zero_identity]
+          simp [Not.not] at hψ
+          rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
+          simp [hψ] at h
+          rw [Set.setOf_app_iff, Set.mem_def] at h
+          obtain ⟨hl, hr⟩ := h
+          ring_nf
+          constructor <;> assumption
+        | succ k ih =>
+          obtain ⟨hl, hr⟩ := ih
+          specialize hψ (k + 1)
+          simp [Not.not] at hψ
+          specialize h (Suffix σ (k + 1)) hr
+          rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
+          simp [hψ] at h
+          rw [Set.setOf_app_iff, Set.mem_def] at h
+          rw [Suffix.composition] at h
+          assumption
+
+      right
+      intro i
+      specialize h' i
+      obtain ⟨hl, hr⟩ := h'
+      assumption
+    else
+      simp [Not.not] at hψ
+      have hψ' := satisfies_for_first_time_iff_satisfies ψ σ hψ
+      obtain ⟨i, hi⟩ := hψ'
+      obtain ⟨hil, hir⟩ := hi
+      left
+      use i
+      simp [And.and, hil]
+
+      let h' (k : ℕ) : k < i → ((Suffix σ k ⊨ ϕ) ∧ (Suffix σ (k + 1) ∈ P)) := by
+        induction k with
+        | zero =>
+          if c : 0 < i then
+            simp [c]
+            specialize hir 0 c
+            simp [Not.not] at hir
+            specialize h σ hσ
+            rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
+            rw [Suffix.zero_identity] at hir
+            simp [hir] at h
+            rw [Set.setOf_app_iff, Set.mem_def] at h
+            rw [Suffix.zero_identity]
+            assumption
+          else
+            simp [c]
+        | succ n ih =>
+          if c : n + 1 < i then
+            simp [c]
+            have hn : n < i := Nat.lt_trans (lt_add_one n) c
+            specialize ih hn
+            obtain ⟨hl, hr⟩ := ih
+            specialize h (Suffix σ (n + 1)) hr
+            rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
+            rw [Set.setOf_app_iff, Set.mem_def] at h
+            specialize hir (n + 1) c
+            simp [Not.not] at hir
+            simp [hir] at h
+            rw [Suffix.composition] at h
+            assumption
+          else
+            simp [c]
+
+      intro k hk
+      specialize h' k hk
+      obtain ⟨hl, hr⟩ := h'
+      assumption
 
 /-!
 We will now use the satisfaction of LTL formulae to define satisfaction of PL formulae.

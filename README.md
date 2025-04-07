@@ -211,6 +211,7 @@ Implements transition systems and related concepts for modeling state-based syst
       - `ltl_absorption_eventually_always`: $$(□ (♢ (□ ϕ))) ≡ (♢ (□ ϕ))$$
     - **Expansions**
       - `ltl_expansion_until`: $$(ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ))))$$
+      - `ltl_expansion_weakuntil`: $$(ϕ 𝓦 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓦 ψ))))$$
       - `ltl_expansion_eventually`: $$(♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ)))$$
       - `ltl_expansion_always`: $$(□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ)))$$
     - **Distributivity**
@@ -218,6 +219,7 @@ Implements transition systems and related concepts for modeling state-based syst
       - `ltl_distributive_eventually_or`: $$(♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ))$$
       - `ltl_distributive_always_and`: $$(□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ))$$
   - `until_least_solution_of_expansion_law`: Until is the Least Solution of the Expansion Law
+  - `weakuntil_greatest_solution_of_expansion_law`: Weak Until is the Greatest Solution of the Expansion Law
   
 - **Satisfaction of PL Formulae by Sets of Atomic Propositions**:
   - $$A \vDash \varphi$$: A set of atomic propositions $$A$$ satisfies a PL formula $$\varphi$$
@@ -256,7 +258,6 @@ Implements transition systems and related concepts for modeling state-based syst
 
 - Proving a theorem about Relating Finite Trace and Trace Inclusion (WIP)
 - Formalizing fairness and related results
-- Formalizing results about Weak Until (WIP)
 - Formalizing results about Positive Normal Form
 
 ### Ambitious goals
