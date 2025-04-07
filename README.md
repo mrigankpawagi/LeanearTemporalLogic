@@ -193,7 +193,7 @@ Implements transition systems and related concepts for modeling state-based syst
   - `equivalent_ltl_refl`, `equivalent_ltl_symm`, `equivalent_ltl_trans`: Formula equivalence is an equivalence relation
   - **Derived rules for equivalence**
     - `equivalent_ltl_preserves_negation`: $$(ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ))$$
-    - `equivalent_ltl_preserves_always`: $$(ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ))$$
+    - `equivalent_ltl_preserves_always`: $$(ϕ ≡ ψ) ↔ ((□ ϕ) ≡ (□ ψ))$$
     - `ltl_double_negation`: $$(¬ (¬ ϕ)) ≡ ϕ$$
     - **Dualities**
       - `ltl_duality_next`: $$(¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))$$
