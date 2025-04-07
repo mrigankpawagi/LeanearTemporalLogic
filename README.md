@@ -180,7 +180,7 @@ Implements transition systems and related concepts for modeling state-based syst
     - `world_satisfies_and`: $$(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))$$
     - `world_satisfies_next`: $$(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)$$
     - `world_satisfies_until`: $$(σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ j, (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁)))$$
-    - `world_satisfies_eventually`: $$ (σ ⊨ (♢ ϕ)) ↔ ∃ i, ((σ[i…]) ⊨ ϕ)$$
+    - `world_satisfies_eventually`: $$(σ ⊨ (♢ ϕ)) ↔ ∃ i, ((σ[i…]) ⊨ ϕ)$$
     - `world_satisfies_always`: $$(σ ⊨ (□ ϕ)) ↔ ∀ i, ((σ[i…]) ⊨ ϕ)$$
     - `world_satisfies_always_eventually`: $$(σ ⊨ (□ ♢ ϕ)) ↔ ∀ i, ∃ j, ((σ[i+j…]) ⊨ ϕ)$$
     - `world_satisfies_eventually_always`: $$(σ ⊨ (♢ □ ϕ)) ↔ ∃ i, ∀ j, ((σ[i+j…]) ⊨ ϕ)$$
