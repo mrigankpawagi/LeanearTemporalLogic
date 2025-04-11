@@ -15,20 +15,13 @@ inductive LTLFormula (AP: Type) : Type
 | until (ϕ ψ : LTLFormula AP)
 
 /-!
-We will also define a *PL Formula* as an LTL formula without temporal operators.
+We will also define a *PL Formula* similar to an LTL formula without temporal operators.
 -/
-
-def isPLFormula {AP: Type} : LTLFormula AP → Prop
-| .True => true
-| .atom _ => true
-| .not ϕ => isPLFormula ϕ
-| .and ϕ ψ => isPLFormula ϕ ∧ isPLFormula ψ
-| .next _ => false
-| .until _ _ => false
-
-structure PLFormula (AP: Type) where
-  formula : LTLFormula AP
-  h : isPLFormula formula
+inductive PLFormula (AP: Type) : Type
+| True
+| atom (a : AP)
+| not (ϕ : PLFormula AP)
+| and (ϕ ψ : PLFormula AP)
 
 namespace LTLFormula
 
@@ -43,20 +36,12 @@ class Not (α: Type) where
 
 instance : Not Prop := ⟨fun p ↦ ¬ p⟩
 instance {AP: Type} : Not (LTLFormula AP) := ⟨LTLFormula.not⟩
-instance {AP: Type} : Not (PLFormula AP) := ⟨fun f ↦ ⟨LTLFormula.not f.formula, by
-  obtain ⟨f', h⟩ := f
-  simp
-  rw [isPLFormula]
-  exact h⟩⟩
+instance {AP: Type} : Not (PLFormula AP) := ⟨PLFormula.not⟩
 prefix:50 (priority := high) "¬ " => Not.not
 
 attribute [match_pattern] Not.not
 @[simp] theorem not_def {AP: Type} (ϕ : LTLFormula AP) : (¬ ϕ) = LTLFormula.not ϕ := rfl
-@[simp] theorem not_def_PL {AP: Type} (ϕ : PLFormula AP) : (¬ ϕ) = ⟨LTLFormula.not ϕ.formula, by
-  obtain ⟨f, h⟩ := ϕ
-  simp
-  rw [isPLFormula]
-  exact h⟩ := rfl
+@[simp] theorem not_def_PL {AP: Type} (ϕ : PLFormula AP) : (¬ ϕ) = PLFormula.not ϕ := rfl
 
 -- `ϕ ∧ ψ` for `and ϕ ψ`
 class And (α : Type) where
@@ -64,22 +49,12 @@ class And (α : Type) where
 
 instance : And Prop := ⟨fun p q ↦ p ∧ q⟩
 instance {AP: Type} : And (LTLFormula AP) := ⟨LTLFormula.and⟩
-instance {AP: Type} : And (PLFormula AP) := ⟨fun f g ↦ ⟨LTLFormula.and f.formula g.formula, by
-  obtain ⟨f', hf⟩ := f
-  obtain ⟨g', hg⟩ := g
-  simp
-  rw [isPLFormula]
-  constructor <;> assumption⟩⟩
+instance {AP: Type} : And (PLFormula AP) := ⟨PLFormula.and⟩
 infixl:65 (priority := high) " ∧ " => And.and
 
 attribute [match_pattern] And.and
 @[simp] theorem and_def {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ∧ ψ) = LTLFormula.and ϕ ψ := rfl
-@[simp] theorem and_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∧ ψ) = ⟨LTLFormula.and ϕ.formula ψ.formula, by
-  obtain ⟨f, hf⟩ := ϕ
-  obtain ⟨g, hg⟩ := ψ
-  simp
-  rw [isPLFormula]
-  constructor <;> assumption⟩ := rfl
+@[simp] theorem and_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∧ ψ) = PLFormula.and ϕ ψ := rfl
 
 -- `ϕ ∨ ψ` for `or ϕ ψ`
 class Or (α : Type) where
@@ -87,24 +62,14 @@ class Or (α : Type) where
 
 instance : Or Prop := ⟨fun p q ↦ p ∨ q⟩
 instance {AP: Type} : Or (LTLFormula AP) := ⟨fun ϕ ψ ↦ ¬ ((¬ ϕ) ∧ (¬ ψ))⟩
-instance {AP: Type} : Or (PLFormula AP) := ⟨fun f g ↦ ⟨¬ ((¬ f.formula) ∧ (¬ g.formula)), by
-  obtain ⟨f', hf⟩ := f
-  obtain ⟨g', hg⟩ := g
-  simp
-  rw [isPLFormula]
-  constructor <;> assumption⟩⟩
+instance {AP: Type} : Or (PLFormula AP) := ⟨fun ϕ ψ ↦ ¬ ((¬ ϕ) ∧ (¬ ψ))⟩
 infixl:65 (priority := high) " ∨ " => Or.or
 def or {AP: Type} (ϕ ψ : LTLFormula AP) : LTLFormula AP := Or.or ϕ ψ
 def or_PL {AP: Type} (ϕ ψ : PLFormula AP) : PLFormula AP := Or.or ϕ ψ
 
 attribute [match_pattern] Or.or
 @[simp] theorem or_def {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
-@[simp] theorem or_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∨ ψ) = ⟨¬ ((¬ ϕ.formula) ∧ (¬ ψ.formula)), by
-  obtain ⟨f, hf⟩ := ϕ
-  obtain ⟨g, hg⟩ := ψ
-  simp
-  rw [isPLFormula]
-  constructor <;> assumption⟩ := rfl
+@[simp] theorem or_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
 
 -- `◯ ϕ` for `next ϕ`
 prefix:65 (priority := high) "◯ " => next
@@ -166,17 +131,37 @@ example {AP: Type} (a b : AP) : length ((◯ atom a) ∨ atom b) = 5 := by
   rw [length_or]
   rfl
 
+end LTLFormula
+
+namespace PLFormula
+/-!
+Since PL Formulas can be seen as LTL Formulas without temporal operators, we will define a coercion from PLFormula to LTLFormula.
+-/
+def toLTLFormula {AP: Type} : PLFormula AP → LTLFormula AP
+| PLFormula.True => ⊤
+| PLFormula.atom a => LTLFormula.atom a
+| PLFormula.not ϕ => ¬ (PLFormula.toLTLFormula ϕ)
+| PLFormula.and ϕ ψ => (PLFormula.toLTLFormula ϕ) ∧ (PLFormula.toLTLFormula ψ)
+
+instance {AP: Type} : Coe (PLFormula AP) (LTLFormula AP) := ⟨PLFormula.toLTLFormula⟩
+
+def toLTLFormula_or {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∨ ψ) = toLTLFormula ϕ ∨ toLTLFormula ψ := by
+  simp only [PLFormula.toLTLFormula]
+  simp only [LTLFormula.not_def, LTLFormula.and_def, LTLFormula.or_def]
+
+def toLTLFormula_not {AP: Type} (ϕ : PLFormula AP) : toLTLFormula (¬ ϕ) = (¬ toLTLFormula ϕ) := by
+  simp only [PLFormula.toLTLFormula]
+
+def toLTLFormula_and {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∧ ψ) = toLTLFormula ϕ ∧ toLTLFormula ψ := by
+  simp only [PLFormula.toLTLFormula]
+
 /-!
 We can also define the length of a PL formula by using the above definition.
 -/
-def length_PL {AP: Type} (ϕ : PLFormula AP) : PLFormula AP → ℕ := length ϕ.formula
+def length {AP: Type} (ϕ: PLFormula AP) : ℕ := LTLFormula.length ϕ.toLTLFormula
 
-def length_PL_or {AP: Type} (ϕ ψ : PLFormula AP) : length_PL (ϕ ∨ ψ) = 4 + length_PL ϕ + length_PL ψ := by
-  repeat rw [length_PL]
-  simp only [Or.or]
-  have h := length_or ϕ.formula ψ.formula
-  simp only [Or.or] at h
-  rw [h]
-  simp
+def length_or {AP: Type} (ϕ ψ : PLFormula AP) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
+  unfold length
+  rw [toLTLFormula_or, LTLFormula.length_or]
 
-end LTLFormula
+end PLFormula

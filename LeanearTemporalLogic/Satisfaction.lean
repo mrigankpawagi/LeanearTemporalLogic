@@ -1471,17 +1471,20 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
 /-!
 We will now use the satisfaction of LTL formulae to define satisfaction of PL formulae.
 -/
-instance {AP: Type} : Satisfaction (Set AP) (PLFormula AP) := ⟨fun A Φ ↦ A ⊨ Φ.formula⟩
+instance {AP: Type} : Satisfaction (Set AP) (PLFormula AP) := ⟨fun A Φ ↦ A ⊨ Φ.toLTLFormula⟩
 
 /-!
 We will also define some useful lemmas for satisfaction of PL formulae.
 -/
 def set_satisfies_negation {AP: Type} (σ : Set AP) (ϕ : PLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
-  simp [Satisfaction.Satisfies]
-  rw [world_satisfies_ltl]
+  simp only [Satisfaction.Satisfies]
+  rw [PLFormula.toLTLFormula_not]
+  simp only [world_satisfies_ltl]
 
 def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
+  rw [PLFormula.toLTLFormula_or]
+  simp only [or_def, not_def, and_def]
   repeat rw [world_satisfies_ltl]
   simp [Or.or, Not.not]
   constructor
@@ -1497,8 +1500,9 @@ def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ
     assumption
 
 def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
-  simp [Satisfaction.Satisfies]
-  repeat rw [world_satisfies_ltl]
+  simp only [Satisfaction.Satisfies]
+  rw [PLFormula.toLTLFormula_and]
+  simp only [world_satisfies_ltl]
 
 end section
 
