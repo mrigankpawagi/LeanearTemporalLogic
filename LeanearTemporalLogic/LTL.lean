@@ -146,14 +146,14 @@ def toLTLFormula {AP: Type} : PLFormula AP → LTLFormula AP
 instance {AP: Type} : Coe (PLFormula AP) (LTLFormula AP) := ⟨PLFormula.toLTLFormula⟩
 
 def toLTLFormula_or {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∨ ψ) = toLTLFormula ϕ ∨ toLTLFormula ψ := by
-  simp only [PLFormula.toLTLFormula]
+  simp only [toLTLFormula]
   simp only [LTLFormula.not_def, LTLFormula.and_def, LTLFormula.or_def]
 
 def toLTLFormula_not {AP: Type} (ϕ : PLFormula AP) : toLTLFormula (¬ ϕ) = (¬ toLTLFormula ϕ) := by
-  simp only [PLFormula.toLTLFormula]
+  simp only [toLTLFormula]
 
 def toLTLFormula_and {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∧ ψ) = toLTLFormula ϕ ∧ toLTLFormula ψ := by
-  simp only [PLFormula.toLTLFormula]
+  simp only [toLTLFormula]
 
 /-!
 We can also define the length of a PL formula by using the above definition.
