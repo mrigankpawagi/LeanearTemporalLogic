@@ -1513,7 +1513,7 @@ We will define a satisfaction relation between transition systems and LT propert
 -/
 instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := ⟨fun TSwts P ↦ TracesWTS TSwts ⊆ P⟩
 
-instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.TS.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
+instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
 /-!
 We define some coercions and membership relations to easily work with traces and LT properties.
@@ -1649,7 +1649,7 @@ We will now define some special kinds of LT properties, starting with **Invarian
 def isInvariantWithCondition {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
 def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithCondition P ϕ
 
-theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.TS.L s ⊨ ϕ)) := by
+theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
   obtain ⟨ϕ, hϕ⟩ := h
@@ -1680,7 +1680,6 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       simp at htail
       have hhead : ∃ π', π' ∈ PathsFromState s := path_originates_from_state_if_noTerminalState hTS s
       obtain ⟨πhead, hπhead⟩ := hhead
-      simp
       simp at πhead
       simp at h'
       simp at s

@@ -1,7 +1,7 @@
 import Mathlib
 
 /-!
-Now we define a transition system, which is a tuple `(S, Act, ⟶, I, L)`, parameterized by a set `AP` of atomic propositions, where
+We define a transition system, which is a tuple `(S, Act, ⟶, I, L)`, parameterized by a set `AP` of atomic propositions, where
 - `S` is a set of states
 - `Act` is a set of actions (or transitions)
 - `Trans ⊆ S × Act × S` is a transition relation
@@ -448,6 +448,15 @@ structure TransitionSystemWithoutTerminalStates (AP: Type) where
 abbrev TransitionSystemWTS := TransitionSystemWithoutTerminalStates
 
 /-!
+In order to easily work with TransitionSystemWTS, we will define some projections.
+-/
+def TransitionSystemWTS.S {AP: Type} (TSwts: TransitionSystemWTS AP) := TSwts.TS.S
+def TransitionSystemWTS.Act {AP: Type} (TSwts: TransitionSystemWTS AP) := TSwts.TS.Act
+def TransitionSystemWTS.Trans {AP: Type} (TSwts: TransitionSystemWTS AP) := TSwts.TS.Trans
+def TransitionSystemWTS.I {AP: Type} (TSwts: TransitionSystemWTS AP) := TSwts.TS.I
+def TransitionSystemWTS.L {AP: Type} (TSwts: TransitionSystemWTS AP) := TSwts.TS.L
+
+/-!
 Transition systems without terminal states have only infinite (paths and) traces. We can use this to simplify some definitions.
 -/
 def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragment TSwts.TS) (h: π ∈ Paths TSwts.TS) : InfiniteTrace AP :=
@@ -461,7 +470,7 @@ def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragmen
         simp at h₂)
   | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
-def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP :=
+def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP :=
   match π with
   | PathFragment.finite _ => False.elim (by
       rw [PathsFromState, Set.mem_setOf] at h
@@ -471,7 +480,7 @@ def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSw
       simp at h₁)
   | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
-def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) (h' : TSwts.TS.I s) : InfiniteTrace AP :=
+def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) (h' : TSwts.I s) : InfiniteTrace AP :=
   TraceFromPathWTS π (by
     rw [Paths, Set.mem_setOf, isPath]
     rw [isInitialPathFragment]
@@ -480,14 +489,14 @@ def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} 
     rw [hr]
     constructor <;> assumption)
 
-def TracesFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) : Set (InfiniteTrace AP) :=
+def TracesFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) : Set (InfiniteTrace AP) :=
   { t | ∃ (p: PathFragment TSwts.TS) (h: p ∈ PathsFromState s), t = TraceFromPathFromStateWTS s p h }
 
-def TracesFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.TS.S) (h: TSwts.TS.I s) : Set (InfiniteTrace AP) :=
+def TracesFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) (h: TSwts.I s) : Set (InfiniteTrace AP) :=
   { t | ∃ (p: PathFragment TSwts.TS) (h': p ∈ PathsFromState s), t = TraceFromPathFromInitialStateWTS s p h' h }
 
 def TracesWTS {AP: Type} (TSwts: TransitionSystemWTS AP) : Set (InfiniteTrace AP) :=
-  ⋃ s ∈ {s | TSwts.TS.I s}, TracesFromInitialStateWTS s (by assumption)
+  ⋃ s ∈ {s | TSwts.I s}, TracesFromInitialStateWTS s (by assumption)
 
 def PathToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragment TSwts.TS) (h: π ∈ Paths TSwts.TS) : InfinitePathFragment TSwts.TS :=
   match π with
@@ -500,7 +509,7 @@ def PathToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFr
         simp at h₂)
   | PathFragment.infinite π' => π'
 
-def PathFromStateToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} {s: TSwts.TS.S} (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfinitePathFragment TSwts.TS :=
+def PathFromStateToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} {s: TSwts.S} (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfinitePathFragment TSwts.TS :=
   match π with
   | PathFragment.finite _ => False.elim (by
       rw [PathsFromState, Set.mem_setOf] at h
