@@ -1,4 +1,5 @@
 import Mathlib
+import LeanearTemporalLogic.AbstractWorlds
 
 /-!
 We define a transition system, which is a tuple `(S, Act, ⟶, I, L)`, parameterized by a set `AP` of atomic propositions, where
@@ -402,11 +403,8 @@ def PathFragment.concatenate_finite_and_infinite {AP: Type} {TS : TransitionSyst
 /-!
 The *trace* of a path fragment is its projection onto 2^AP.
 -/
-structure FiniteTrace (AP: Type) where
-  n : ℕ
-  f : Fin (n + 1) → Set AP
-
-def InfiniteTrace (AP: Type) := ℕ → Set AP
+abbrev InfiniteTrace := AbstractWorld
+abbrev FiniteTrace := AbstractFiniteWorld
 
 inductive Trace (AP: Type) : Type
   | finite (trace : FiniteTrace AP)

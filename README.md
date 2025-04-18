@@ -47,6 +47,10 @@ Propositional Logic (PL) formulas are defined as a subset of LTL formulas withou
 
 This module also provides functions for calculating the length of formulae. While this was added merely as a sanity check for the syntax, it may be useful for reasoning about the time complexity of model-checking algorithms.
 
+### AbstractWorlds
+
+Provides definitions for `AbstractWorld` and `AbstractFiniteWorld` in order to create definitionally equivalent objects like traces and worlds.
+
 ### LTProperty
 
 Provides a definition of Linear Time Properties as subsets of $$(2^{\text{AP}})^\omega$$ where $$\text{AP}$$ is the set of atomic propositions that parameterize LT Properties.

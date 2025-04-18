@@ -1,4 +1,5 @@
 import Mathlib
+import LeanearTemporalLogic.AbstractWorlds
 import LeanearTemporalLogic.LTL
 import LeanearTemporalLogic.TransitionSystems
 import LeanearTemporalLogic.LTProperty
@@ -19,11 +20,8 @@ infixl:70 (priority := high) " ≡ " => Equivalent.Equiv
 /-!
 A world is a sequence of states where each state is set of atomic propositions (that are considered true in that state).
 -/
-def World (AP: Type) : Type := ℕ → Set AP
-
-structure FiniteWorld (AP: Type) where
-  n : ℕ
-  f : Fin (n + 1) → Set AP
+abbrev World := AbstractWorld
+abbrev FiniteWorld := AbstractFiniteWorld
 
 /-!
 A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
@@ -1516,14 +1514,8 @@ instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := �
 instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
 /-!
-We define some coercions and membership relations to easily work with traces and LT properties.
+Some definitions to reconcile traces and LT properties.
 -/
-instance {AP: Type} : Coe (FiniteWorld AP) (FiniteTrace AP) := ⟨fun ω => ⟨ω.n, ω.f⟩⟩
-instance {AP: Type} : Coe (FiniteTrace AP) (FiniteWorld AP) := ⟨fun σ => ⟨σ.n, σ.f⟩⟩
-
-instance {AP: Type} : Coe (Set (FiniteWorld AP)) (Set (FiniteTrace AP)) := ⟨fun S => {σ | ↑σ ∈ S}⟩
-instance {AP: Type} : Coe (Set (FiniteTrace AP)) (Set (FiniteWorld AP)) := ⟨fun S => {ω | ↑ω ∈ S}⟩
-
 instance {AP: Type} : Membership (InfiniteTrace AP) (LTProperty AP) := ⟨fun P π ↦ by
   rw [LTProperty] at P
   rw [InfiniteTrace] at π
@@ -1885,7 +1877,6 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
         obtain ⟨n, f⟩ := ω
         simp
         funext i
-        simp at hπr
         unfold σ Trace InfiniteTraceFromInfinitePathFragment π' PathFragment.concatenate_finite_and_infinite
         simp
         unfold FiniteTraceFromFinitePathFragment at hπr
@@ -2146,7 +2137,6 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
 
 theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : TracesFin TSwts.TS = prefLTProperty (TracesWTS TSwts) := by
   unfold prefLTProperty
-  simp
   rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
   constructor
   · intro t ht
@@ -2265,8 +2255,9 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
   · intro t ht
     unfold TracesFin TracesFinFromState
     simp
-    rw [Set.mem_def, Set.setOf_app_iff] at ht
+    rw [Set.mem_iUnion] at ht
     obtain ⟨T, hT⟩ := ht
+    rw [Set.mem_iUnion] at hT
     obtain ⟨hT₁, hT₂⟩ := hT
     unfold TracesWTS TracesFromInitialStateWTS at hT₁
     rw [Set.mem_iUnion] at hT₁
@@ -2276,7 +2267,6 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     obtain ⟨π, hπ, hT₁⟩ := hT₁
     unfold pref Prefix at hT₂
     rw [Set.mem_def] at hT₂
-    simp at hT₂
     unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS at hT₁
     cases π with
     | finite p =>
@@ -2635,7 +2625,6 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
     have h₅ := prefix_of_closure_is_prefix (TracesWTS TSwts₂)
 
     rw [h₂, h₃]
-    simp
     intro t
     intro ht
     apply h₄ at ht
@@ -2744,14 +2733,9 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         unfold pref Prefix at hT₂
         rw [Set.mem_def] at hT₂
         obtain ⟨n, hT₂⟩ := hT₂
-        simp at hT₂
-        obtain ⟨hn, hf⟩ := hT₂
         unfold T' TraceFromPathFragment InfiniteTraceFromInfinitePathFragment at hT'
         simp at hT'
-        rw [hT'] at hf
-        rw [← hn] at hf
-        simp at hf
-        rw [← hf]
+        rw [hT₂, hT']
   · intro h
     rw [Set.subset_def]
     intro t ht
@@ -2996,7 +2980,6 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
     simp
 
   use closureLTProperty P, Plive, hsafe, hlive
-  apply h₂
 
 
 /-!
