@@ -2840,16 +2840,19 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
               let hlim := hc.choose_spec
               exact lim
 
-            let getLimitFromState : TS.S → Finset ℕ := fun s => by
+            let getLimitFromState : TS.S → ℕ := fun s => by
               if hs: ∃ m, s = finPathState m 0 then
                 let m := hs.choose
-                exact { getLimit m }
+                exact getLimit m
               else
-                exact ∅
+                exact 0
 
-            let limits : Set ℕ := ⋃ s ∈ Selems, getLimitFromState s
+            -- let limits : Finset ℕ := { getLimitFromState s | s ∈ Selems }
 
             -- find the maximum value in limits
+            -- let maxLimit : ℕ := limits.max
+
+
             sorry
 
           let m := hm.choose
@@ -2868,6 +2871,18 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
             by
               sorry⟩
         | k + 1 => sorry
+
+      let π : InfinitePathFragment TS := ⟨fun i => (proofStructure i).Sseq i, by
+          intro i
+          unfold proofStructure
+          simp
+
+
+          sorry⟩
+
+      unfold Traces TracesFromState TraceFromPathFragmentSet
+      simp
+      use (π.states 0)
 
       sorry
 
