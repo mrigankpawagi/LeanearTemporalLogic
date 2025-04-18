@@ -112,7 +112,7 @@ def length {AP: Type} : LTLFormula AP → ℕ
 We will define some lemmas to make it easier to calculate the length of a formula with other operators.
 -/
 def length_or {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
-  simp
+  simp only [or_def, not_def, and_def]
   repeat rw [length]
   omega
 

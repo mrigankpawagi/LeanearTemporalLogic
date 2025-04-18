@@ -109,19 +109,19 @@ theorem maximalIffInfiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP
   · intro hmax
     cases e with
     | finite e =>
-      simp
-      simp at hmax
+      simp only
+      simp only at hmax
       specialize h (endStateExecutionFragment e)
       contradiction
     | infinite e =>
-      simp
+      simp only
   · intro hinf
     cases e with
     | finite e =>
-      simp
-      simp at hinf
+      simp only
+      simp only at hinf
     | infinite e =>
-      simp
+      simp only
 
 
 /-!
@@ -196,17 +196,17 @@ def finiteExecutionFragmentToFinitePathFragment {AP: Type} {TS : TransitionSyste
   intro i
   unfold Post
   unfold PostAction
-  simp
+  simp only [Fin.coe_eq_castSucc, Fin.coeSucc_eq_succ, Set.mem_iUnion, Set.mem_setOf_eq]
   have h := e.valid i
   use e.actions i
-  simp at h
+  simp only [Fin.coe_eq_castSucc, Fin.coeSucc_eq_succ] at h
   assumption⟩
 
 def infiniteExecutionFragmentToInfinitePathFragment {AP: Type} {TS : TransitionSystem AP} (e: InfiniteExecutionFragment TS) : InfinitePathFragment TS := ⟨e.states, by
   intro i
   unfold Post
   unfold PostAction
-  simp
+  simp only [Set.mem_iUnion, Set.mem_setOf_eq]
   have h := e.valid i
   use e.actions i⟩
 
@@ -219,7 +219,7 @@ noncomputable def finitePathFragmentToFiniteExecutionFragment {AP: Type} {TS : T
   fun i => by
     have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
     unfold Post PostAction at h
-    simp at h
+    simp only [Fin.coe_eq_castSucc, Fin.coeSucc_eq_succ, Set.mem_iUnion, Set.mem_setOf_eq] at h
     let α: TS.Act := Exists.choose h
     let hα := Exists.choose_spec h
     exact α,
@@ -227,16 +227,16 @@ noncomputable def finitePathFragmentToFiniteExecutionFragment {AP: Type} {TS : T
     intro i
     have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
     unfold Post PostAction at h
-    simp at h
+    simp only [Fin.coe_eq_castSucc, Fin.coeSucc_eq_succ, Set.mem_iUnion, Set.mem_setOf_eq] at h
     let hα := Exists.choose_spec h
-    simp
+    simp only [Fin.coe_eq_castSucc, Fin.coeSucc_eq_succ]
     exact hα⟩
 
 noncomputable def infinitePathFragmentToInfiniteExecutionFragment {AP: Type} {TS : TransitionSystem AP} (π: InfinitePathFragment TS) : InfiniteExecutionFragment TS := ⟨π.states,
   fun i => by
     have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
     unfold Post PostAction at h
-    simp at h
+    simp only [Set.mem_iUnion, Set.mem_setOf_eq] at h
     let α: TS.Act := Exists.choose h
     let hα := Exists.choose_spec h
     exact α,
@@ -244,9 +244,9 @@ noncomputable def infinitePathFragmentToInfiniteExecutionFragment {AP: Type} {TS
     intro i
     have h : π.states (i + 1) ∈ Post (π.states i) := π.valid i
     unfold Post PostAction at h
-    simp at h
+    simp only [Set.mem_iUnion, Set.mem_setOf_eq] at h
     let hα := Exists.choose_spec h
-    simp
+    simp only
     exact hα⟩
 
 noncomputable def pathFragmentToExecutionFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : ExecutionFragment TS :=
@@ -275,19 +275,19 @@ theorem maximalIffInfinitePathFragment {AP: Type} {TS : TransitionSystem AP} (h 
   · intro hmax
     cases π with
     | finite π =>
-      simp
-      simp at hmax
+      simp only
+      simp only at hmax
       specialize h (π.states (Fin.last π.n))
       contradiction
     | infinite π =>
-      simp
+      simp only
   · intro hinf
     cases π with
     | finite π =>
-      simp
-      simp at hinf
+      simp only
+      simp only at hinf
     | infinite π =>
-      simp
+      simp only
 
 def isInitialPathFragment {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) : Prop := TS.I (startStatePathFragment π)
 
@@ -316,9 +316,9 @@ Some helpful lemmas and functions.
 theorem path_starts_from_startState {AP: Type} {TS : TransitionSystem AP} (π: PathFragment TS) (h: π ∈ Paths TS)
 : π ∈ PathsFromState (startStatePathFragment π) := by
   unfold PathsFromState
-  simp
+  simp only [Set.mem_setOf_eq, and_true]
   rw [Paths] at h
-  simp at h
+  simp only [Set.mem_setOf_eq] at h
   rw [isPath] at h
   obtain ⟨_, hmax⟩ := h
   exact hmax
@@ -333,12 +333,12 @@ noncomputable def construct_pathStates_from_state_if_noTerminalState {AP: Type} 
     unfold Post at h
     unfold PostAction at h
     rw [Set.eq_empty_iff_forall_not_mem] at h
-    simp at h
+    simp only [Set.mem_iUnion, Set.mem_setOf_eq, not_exists, not_forall, not_not] at h
     let x := Exists.choose h
 
     have valid : x ∈ Post prev := by
       unfold Post PostAction
-      simp
+      simp only [Set.mem_iUnion, Set.mem_setOf_eq]
       let hx := Exists.choose_spec h
       obtain ⟨α, h'⟩ := hx
       use α
@@ -359,41 +359,41 @@ theorem path_originates_from_state_if_noTerminalState {AP: Type} {TS : Transitio
   unfold endStatePathFragment
   unfold startStatePathFragment
   unfold π
-  simp
+  simp only [Set.mem_setOf_eq, true_and]
   unfold construct_pathStates_from_state_if_noTerminalState
-  simp
+  simp only
 
 def PathFragment.concatenate_finite_and_infinite {AP: Type} {TS : TransitionSystem AP} (π: FinitePathFragment TS) (π': InfinitePathFragment TS) (hcont : π.states (Fin.last π.n) = π'.states 0) : InfinitePathFragment TS := ⟨fun i => if i < π.n then π.states i else π'.states (i - π.n), by
   intro i
-  simp
+  simp only [Nat.cast_add, Nat.cast_one]
   if hi: i < π.n then
-    simp [hi]
+    simp only [hi, ↓reduceIte]
     if hii: i + 1 < π.n then
-      simp [hii]
+      simp only [hii, ↓reduceIte]
       have hv := π.valid (Fin.mk i hi)
-      simp at hv
+      simp only at hv
       exact hv
     else
-      simp at hii
+      simp only [not_lt] at hii
       have hieq : i + 1 = π.n := by apply Nat.le_antisymm <;> assumption
       rw [hieq]
-      simp
+      simp only [lt_self_iff_false, ↓reduceIte, tsub_self]
       rw [← hcont]
       have hv := π.valid (Fin.mk i hi)
-      simp at hv
+      simp only at hv
       rw [← Nat.cast_add_one, hieq] at hv
-      simp [← Fin.natCast_eq_last]
+      simp only [← Fin.natCast_eq_last]
       exact hv
   else
-    simp [hi]
-    simp at hi
+    simp only [hi, ↓reduceIte]
+    simp only [not_lt] at hi
     apply Nat.lt_add_one_of_le at hi
     if hii : i + 1 < π.n then
-      simp at hii
+      simp only at hii
       have hc := Nat.lt_trans hii hi
-      simp at hc
+      simp only [lt_self_iff_false] at hc
     else
-      simp [hii]
+      simp only [hii, ↓reduceIte]
       have hv := π'.valid (i - π.n)
       rw [Nat.sub_add_comm (by
         rw [← Nat.lt_add_one_iff]
@@ -465,7 +465,7 @@ def TraceFromPathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFragmen
         obtain ⟨_, h₂⟩ := h
         rw [maximalIffInfinitePathFragment TSwts.h] at h₂
         unfold isInfinitePathFragment at h₂
-        simp at h₂)
+        simp only at h₂)
   | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
 def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfiniteTrace AP :=
@@ -475,7 +475,7 @@ def TraceFromPathFromStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSw
       obtain ⟨h₁, _⟩ := h
       rw [maximalIffInfinitePathFragment TSwts.h] at h₁
       unfold isInfinitePathFragment at h₁
-      simp at h₁)
+      simp only at h₁)
   | PathFragment.infinite π' => InfiniteTraceFromInfinitePathFragment π'
 
 def TraceFromPathFromInitialStateWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (s: TSwts.S) (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) (h' : TSwts.I s) : InfiniteTrace AP :=
@@ -504,7 +504,7 @@ def PathToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} (π: PathFr
         obtain ⟨_, h₂⟩ := h
         rw [maximalIffInfinitePathFragment TSwts.h] at h₂
         unfold isInfinitePathFragment at h₂
-        simp at h₂)
+        simp only at h₂)
   | PathFragment.infinite π' => π'
 
 def PathFromStateToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} {s: TSwts.S} (π: PathFragment TSwts.TS) (h: π ∈ PathsFromState s) : InfinitePathFragment TSwts.TS :=
@@ -514,7 +514,7 @@ def PathFromStateToInfinitePathWTS {AP: Type} {TSwts: TransitionSystemWTS AP} {s
       obtain ⟨h₁, _⟩ := h
       rw [maximalIffInfinitePathFragment TSwts.h] at h₁
       unfold isInfinitePathFragment at h₁
-      simp at h₁)
+      simp only at h₁)
   | PathFragment.infinite π' => π'
 
 end TransitionSystem

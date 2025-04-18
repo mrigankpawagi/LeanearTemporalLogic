@@ -50,7 +50,7 @@ We will also need prefixes of worlds. Note that prefixes are finite.
 -/
 def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP := ⟨n, fun i => σ i⟩
 
-def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : FiniteWorld AP := ⟨m, fun i => ω.f (Fin.castLE (by simp[h]) i)⟩
+def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : FiniteWorld AP := ⟨m, fun i => ω.f (Fin.castLE (by simp only [add_le_add_iff_right, h]) i)⟩
 
 def pref {AP: Type} (σ: World AP) : Set (FiniteWorld AP) := fun ω => ∃ (n: ℕ), ω = Prefix σ n
 
@@ -81,35 +81,35 @@ instance {AP: Type} : Satisfaction (Set AP) (LTLFormula AP) := ⟨fun A ϕ => by
 We will also define some useful lemmas for satisfaction.
 -/
 def world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies, not_def]
   rw [world_satisfies_ltl]
 
 def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies, or_def, not_def, and_def]
   repeat rw [world_satisfies_ltl]
-  simp [Or.or, Not.not]
+  simp only [Not.not, Or.or]
   constructor
   · intro h
     contrapose h
-    simp at h
-    simp
+    simp only [not_or] at h
+    simp only [not_not]
     assumption
   · intro h
     contrapose h
-    simp at h
-    simp
+    simp only [not_not] at h
+    simp only [not_or]
     assumption
 
 def world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
 def world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies, and_def]
   repeat rw [world_satisfies_ltl]
 
 def world_satisfies_until {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
 /-!
@@ -117,7 +117,7 @@ We will now show satisfaction for ♢ and □ operators.
 -/
 theorem world_satisfies_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ ϕ)) ↔ ∃ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
   unfold eventually
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
   constructor
@@ -144,31 +144,31 @@ theorem world_satisfies_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) :
   -- left to right
   · intro h
     intro i
-    simp [Satisfaction.Satisfies] at h
+    simp only [Satisfaction.Satisfies] at h
     rw [world_satisfies_ltl] at h
     have h₁ := world_satisfies_eventually σ (¬ ϕ)
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies, not_def] at h₁
     rw [h₁] at h
-    simp [Not.not] at h
+    simp only [Not.not, not_exists] at h
     specialize h i
     rw [world_satisfies_ltl] at h
-    simp [Not.not] at h
-    simp [Satisfaction.Satisfies]
+    simp only [Not.not, not_not] at h
+    simp only [Satisfaction.Satisfies]
     assumption
 
   -- right to left
   · intro h
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl]
-    simp [Not.not]
+    simp only [Not.not]
     have h₁ := world_satisfies_eventually σ (¬ ϕ)
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies, not_def] at h₁
     rw [h₁]
-    simp
+    simp only [not_exists]
     intro i
     rw [world_satisfies_ltl]
-    simp [Not.not]
-    simp [Satisfaction.Satisfies] at h
+    simp only [Not.not, not_not]
+    simp only [Satisfaction.Satisfies] at h
     apply h
 
 theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
@@ -226,22 +226,22 @@ theorem world_satisfies_weakuntil {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLF
 
 theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (σ : World AP) (h: ∃ (x : ℕ), Suffix σ x ⊨ ϕ) : ∃ x, (Suffix σ x ⊨ ϕ) ∧ (∀ y < x, ¬ (Suffix σ y ⊨ ϕ)) := by
   by_contra hc
-  simp [And.and] at hc
+  simp only [And.and, not_exists, not_and, not_forall, Classical.not_imp] at hc
   have h'' (x : ℕ): ∀ k ≤ x, Suffix σ k ⊨ (¬ ϕ) := by
     induction x with
     | zero =>
       intro k hk
-      simp at hk
+      simp only [nonpos_iff_eq_zero] at hk
       rw [hk]
       specialize hc 0
-      simp [Not.not] at hc
+      simp only [not_lt_zero', IsEmpty.exists_iff, exists_const, imp_false] at hc
       assumption
     | succ n ih =>
       intro k hk
       by_contra hc'
       specialize hc k
       rw [world_satisfies_negation] at hc'
-      simp [Not.not] at hc hc'
+      simp only [Not.not, not_not] at hc hc' hc'
       apply hc at hc'
       obtain ⟨i, hi, hc'⟩ := hc'
       have hi' : i ≤ n := by
@@ -254,7 +254,7 @@ theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (
       contradiction
 
   have h''' (x : ℕ) : Suffix σ x ⊨ (¬ ϕ) := by
-    specialize h'' x x (by simp)
+    specialize h'' x x (by simp only [le_refl])
     assumption
 
   obtain ⟨i, hi⟩ := h
@@ -275,15 +275,15 @@ instance {AP: Type} : Equivalent (LTLFormula AP) := ⟨fun ϕ ψ => Worlds ϕ = 
 It will be useful to show that this is an equivalence relation.
 -/
 theorem equivalent_ltl_refl {AP: Type} (ϕ : LTLFormula AP) : ϕ ≡ ϕ := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
 
 theorem equivalent_ltl_symm {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ ϕ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   intro h
   rw [h]
 
 theorem equivalent_ltl_trans {AP: Type} (ϕ ψ χ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ χ) → (ϕ ≡ χ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   intro h₁ h₂
   rw [h₁]
   exact h₂
@@ -292,30 +292,30 @@ theorem equivalent_ltl_trans {AP: Type} (ϕ ψ χ : LTLFormula AP) : (ϕ ≡ ψ)
 It would also be useful to show that equivalence is preserved by certain operations.
 -/
 theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ)) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv, not_def]
   constructor
   · intro h
     funext σ
     have h₁ : Worlds ϕ σ = Worlds ψ σ := by rw [h]
-    simp [Worlds] at h₁
-    simp [Worlds]
-    simp [Satisfaction.Satisfies]
+    simp only [Worlds, eq_iff_iff] at h₁
+    simp only [Worlds, eq_iff_iff]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl, world_satisfies_ltl]
-    simp [Not.not]
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Not.not]
+    simp only [Satisfaction.Satisfies] at h₁
     rw [h₁]
   · intro h
     funext σ
     have h₁ : Worlds (¬ ϕ) σ = Worlds (¬ ψ) σ := by
-      simp [Worlds]
+      simp only [Worlds, not_def, eq_iff_iff]
       rw [← Worlds, ← Worlds]
       rw [h]
-    simp [Worlds] at h₁
-    simp [Worlds]
-    simp [Satisfaction.Satisfies]
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Worlds, not_def, eq_iff_iff] at h₁
+    simp only [Worlds, eq_iff_iff]
+    simp only [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies] at h₁
     rw [world_satisfies_ltl, world_satisfies_ltl] at h₁
-    simp [Not.not] at h₁
+    simp only [Not.not] at h₁
     constructor
     · intro h'
       contrapose h'
@@ -327,12 +327,12 @@ theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (
       assumption
 
 theorem equivalent_ltl_preserves_always {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → ((□ ϕ) ≡ (□ ψ)) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   intro h
   funext σ
   unfold Worlds
   rw [world_satisfies_always, world_satisfies_always]
-  simp
+  simp only [eq_iff_iff]
   constructor
   · intro h'
     intro i
@@ -354,82 +354,82 @@ Now we prove some equivalence rules for LTL formulae.
 -/
 
 theorem ltl_double_negation {AP: Type} (ϕ : LTLFormula AP) : (¬ (¬ ϕ)) ≡ ϕ := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv, not_def]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   constructor
   · intro h
-    simp [Satisfaction.Satisfies] at h
+    simp only [Satisfaction.Satisfies] at h
     rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp [Not.not] at h
-    simp [Satisfaction.Satisfies]
+    simp only [Not.not, not_not] at h
+    simp only [Satisfaction.Satisfies]
     assumption
   · intro h
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl, world_satisfies_ltl]
-    simp [Not.not]
+    simp only [Not.not, not_not]
     assumption
 
 theorem ltl_duality_next {AP: Type} (ϕ : LTLFormula AP) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv, not_def]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   constructor
 
   -- left to right
   · intro h
-    simp [Satisfaction.Satisfies] at h
+    simp only [Satisfaction.Satisfies] at h
     rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl, world_satisfies_ltl]
     assumption
 
   -- right to left
   · intro h
-    simp [Satisfaction.Satisfies] at h
+    simp only [Satisfaction.Satisfies] at h
     rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl, world_satisfies_ltl]
     assumption
 
 theorem ltl_duality_eventually {AP: Type} (ϕ : LTLFormula AP) : ((¬ (♢ ϕ)) ≡ (□ (¬ ϕ))) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv, not_def]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   constructor
 
   -- left to right
   · intro h
-    simp [Satisfaction.Satisfies] at h
+    simp only [Satisfaction.Satisfies] at h
     rw [world_satisfies_ltl] at h
     have h₁ : ¬ (σ ⊨ (♢ ϕ)) := by
-      simp [Satisfaction.Satisfies]
+      simp only [Satisfaction.Satisfies]
       assumption
     rw [world_satisfies_eventually] at h₁
-    simp [Not.not] at h₁
+    simp only [Not.not, not_exists] at h₁
     rw [world_satisfies_always]
     intro i
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl]
     specialize h₁ i
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies] at h₁
     apply h₁
 
   -- right to left
   · intro h
-    simp [Satisfaction.Satisfies]
+    simp only [Satisfaction.Satisfies]
     rw [world_satisfies_ltl]
     have h₁ : ¬ (σ ⊨ (♢ ϕ)) := by
       rw [world_satisfies_eventually]
-      simp [Not.not]
+      simp only [Not.not, not_exists]
       intro i
-      simp [Satisfaction.Satisfies]
+      simp only [Satisfaction.Satisfies]
       rw [world_satisfies_always] at h
       specialize h i
-      simp [Satisfaction.Satisfies] at h
+      simp only [Satisfaction.Satisfies] at h
       rw [world_satisfies_ltl] at h
       apply h
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies] at h₁
     apply h₁
 
 theorem ltl_duality_always {AP: Type} (ϕ : LTLFormula AP) : ((¬ (□ ϕ)) ≡ (♢ (¬ ϕ))) := by
@@ -452,7 +452,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
   constructor
   · intro h
     rw [world_satisfies_negation, world_satisfies_until] at h
-    simp [Not.not] at h
+    simp only [Not.not, not_exists] at h
 
     if h₁ : ∀ x, ¬ (Suffix σ x ⊨ ψ) then
       if h₂ : ∀ x, Suffix σ x ⊨ ϕ then
@@ -466,16 +466,16 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       else
         left
         have h' := satisfies_for_first_time_iff_satisfies (¬ ϕ) σ (by
-          simp at h₂
+          simp only [not_forall] at h₂
           obtain ⟨i, hi⟩ := h₂
           use i
           rw [world_satisfies_negation]
-          simp [Not.not]
+          simp only [Not.not]
           assumption)
         obtain ⟨i, hi⟩ := h'
         obtain ⟨hl, hr⟩ := hi
         rw [world_satisfies_negation] at hl
-        simp [Not.not] at hl
+        simp only [Not.not] at hl
         rw [world_satisfies_until]
         use i
         rw [world_satisfies_and, world_satisfies_negation]
@@ -490,46 +490,46 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
           specialize hr k hk
           specialize h₁ k
           rw [world_satisfies_negation] at hr
-          simp [Not.not] at hr
+          simp only [Not.not, not_not] at hr
           rw [world_satisfies_and, world_satisfies_negation]
           constructor <;> assumption
     else
       left
       have h₁' : ¬∀ (x : ℕ), Suffix σ x ⊨ (¬ ψ) := by
-        simp [Not.not] at h₁
+        simp only [Not.not, not_forall, not_not] at h₁
         obtain ⟨i, hi⟩ := h₁
-        simp [Not.not]
+        simp only [Not.not, not_forall]
         use i
-        simp [Satisfaction.Satisfies]
+        simp only [Satisfaction.Satisfies]
         unfold world_satisfies_ltl
-        simp [Not.not]
-        simp [Satisfaction.Satisfies] at hi
+        simp only [Not.not, not_not]
+        simp only [Satisfaction.Satisfies] at hi
         assumption
       have h' := satisfies_for_first_time_iff_satisfies ψ σ (by
-        simp [Not.not, Satisfaction.Satisfies] at h₁'
+        simp only [Not.not, Satisfaction.Satisfies, not_forall] at h₁'
         obtain ⟨i, hi⟩ := h₁'
         use i
-        simp [Satisfaction.Satisfies]
+        simp only [Satisfaction.Satisfies]
         rw [world_satisfies_ltl] at hi
-        simp [Not.not] at hi
+        simp only [Not.not, not_not] at hi
         assumption)
       obtain ⟨i, hi⟩ := h'
       obtain ⟨hl, hr⟩ := hi
       specialize h i
-      simp [And.and] at h
+      simp only [And.and, not_and, not_forall, Classical.not_imp] at h
       apply h at hl
       obtain ⟨j, hj, hl⟩ := hl
       have hl' : ¬∀ (k : ℕ), Suffix σ k ⊨ ϕ := by
         by_contra hc
-        simp [Not.not] at hc
+        simp only [Not.not, not_forall, not_exists, not_not] at hc
         specialize hc j
         contradiction
       have h'' := satisfies_for_first_time_iff_satisfies (¬ ϕ) σ (by
-        simp [Not.not] at hl'
+        simp only [Not.not, not_forall] at hl'
         obtain ⟨i, hi⟩ := hl'
         use i
         rw [world_satisfies_negation]
-        simp [Not.not]
+        simp only [Not.not]
         assumption)
       obtain ⟨k, hk⟩ := h''
       rw [world_satisfies_until]
@@ -537,7 +537,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       have hk' : k < i := by
         have hkh : k ≤ j := by
           by_contra hc
-          simp at hc
+          simp only [not_le] at hc
           obtain ⟨_, hk⟩ := hk
           specialize hk j hc
           contradiction
@@ -546,10 +546,10 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       specialize hr k hk'
       obtain ⟨hkl, hkr⟩ := hk
       rw [world_satisfies_negation] at hkl
-      simp [Not.not] at hr hkl
+      simp only [Not.not] at hr hkl hkl
       constructor
       · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-        simp [Not.not]
+        simp only [Not.not]
         constructor <;> assumption
       · intro m hm
         specialize hkr m hm
@@ -558,11 +558,11 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         specialize hr' m hmi
         rw [world_satisfies_negation]
         rw [world_satisfies_negation] at hkr
-        simp [Not.not] at hkr
+        simp only [Not.not, not_not] at hkr
         constructor <;> assumption
   · intro h
     rw [world_satisfies_negation, world_satisfies_until]
-    simp [Not.not, And.and]
+    simp only [Not.not, And.and, not_exists, not_and, not_forall, Classical.not_imp]
     cases h with
     | inl hl =>
       intro i hi
@@ -572,23 +572,23 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         use j, h'
         rw [world_satisfies_and, world_satisfies_negation] at hj
         obtain ⟨hjl, hjr⟩ := hj
-        simp [Not.not] at hjl
+        simp only [Not.not] at hjl
         assumption
       else
-        simp at h'
+        simp only [not_lt] at h'
         rw [Nat.le_iff_lt_or_eq] at h'
         cases h' with
         | inl hl' =>
           specialize hl i hl'
           rw [world_satisfies_and, world_satisfies_negation] at hl
           obtain ⟨hll, hlr⟩ := hl
-          simp [Not.not] at hlr
+          simp only [Not.not] at hlr
           contradiction
         | inr hr' =>
           rw [hr'] at hi
           rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
           obtain ⟨hjl, hjr⟩ := hj
-          simp [Not.not] at hjr
+          simp only [Not.not] at hjr
           contradiction
     | inr hr =>
       intro i hi
@@ -598,7 +598,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       simp only [And.and] at hr
       obtain ⟨hrl, hrr⟩ := hr
       rw [world_satisfies_negation] at hrr
-      simp [Not.not] at hrr
+      simp only [Not.not] at hrr
       contradiction
 
 theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ))) := by
@@ -615,7 +615,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
       rw [world_satisfies_until]
       constructor
       · intro h
-        simp [Or.or] at h
+        simp only [Or.or] at h
         cases h with
         | inl hl =>
           left
@@ -627,40 +627,40 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           use i
           constructor
           · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-            simp [Not.not, And.and]
+            simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff]
             assumption
           · intro k hk
             specialize hl k (by
               by_contra hc
-              simp at hc
+              simp only [not_lt] at hc
               have hjj : j < i := Nat.lt_of_le_of_lt hc hk
               specialize hir j hjj
-              simp [Not.not] at hir
+              simp only [Not.not] at hir
               contradiction)
             specialize hir k hk
-            simp [Not.not] at hir
+            simp only [Not.not] at hir
             rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-            simp [Not.not, And.and]
+            simp only [And.and, Not.not, not_and, not_not]
             constructor
             · constructor <;> assumption
-            · simp [hl]
+            · simp only [hl, not_true_eq_false, IsEmpty.forall_iff]
         | inr hr =>
           if h' : ∀ x, ¬ (Suffix σ x ⊨ ψ) then
             right
             rw [world_satisfies_always]
             intro i
             rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-            simp [Not.not, And.and]
+            simp only [And.and, Not.not, not_and, not_not]
             specialize h' i
-            simp [Not.not] at h'
+            simp only [Not.not] at h'
             rw [world_satisfies_always] at hr
             specialize hr i
             constructor
             · constructor <;> assumption
-            · simp [hr]
+            · simp only [hr, not_true_eq_false, IsEmpty.forall_iff]
           else
             left
-            simp [Not.not] at h'
+            simp only [Not.not, not_forall, not_not] at h'
             have h'' := satisfies_for_first_time_iff_satisfies ψ σ h'
             rw [world_satisfies_until]
             obtain ⟨i, hi⟩ := h''
@@ -668,18 +668,18 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
             use i
             constructor
             · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-              simp [Not.not, And.and]
+              simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff]
               assumption
             · intro k hk
               rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
-              simp [Not.not, And.and]
+              simp only [And.and, Not.not, not_and, not_not]
               specialize hir k hk
-              simp [Not.not] at hir
+              simp only [Not.not] at hir
               rw [world_satisfies_always] at hr
               specialize hr k
               constructor
               · constructor <;> assumption
-              · simp [hr]
+              · simp only [hr, not_true_eq_false, IsEmpty.forall_iff]
       · intro h
         simp only [Or.or] at h
         cases h with
@@ -690,12 +690,12 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           use j
           constructor
           · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
-            simp [Not.not, And.and] at hj
+            simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff] at hj
             assumption
           · intro k hk
             specialize hl k hk
             rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hl
-            simp [Not.not, And.and] at hl
+            simp only [And.and, Not.not, not_and, not_not] at hl
             obtain ⟨hl₁, hl₂⟩ := hl
             obtain ⟨hl₁l, hl₁r⟩ := hl₁
             assumption
@@ -706,7 +706,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           rw [world_satisfies_always] at hr
           specialize hr i
           rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hr
-          simp [Not.not, And.and] at hr
+          simp only [And.and, Not.not, not_and, not_not] at hr
           obtain ⟨hrl, hrr⟩ := hr
           obtain ⟨hrll, hrlr⟩ := hrl
           assumption
@@ -714,9 +714,9 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
   apply equivalent_ltl_trans _ _ _ h₁ h₂
 
 theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ ϕ)) ≡ (♢ ϕ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   rw [world_satisfies_eventually, world_satisfies_eventually]
   constructor
   · intro h
@@ -736,9 +736,9 @@ theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ �
     assumption
 
 theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) ≡ (□ ϕ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   rw [world_satisfies_always, world_satisfies_always]
   constructor
   · intro h
@@ -757,10 +757,10 @@ theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) 
     assumption
 
 theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
-  simp [Satisfaction.Satisfies]
+  simp only [Worlds, eq_iff_iff]
+  simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl, world_satisfies_ltl]
   constructor
   · intro h
@@ -806,13 +806,13 @@ theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ �
       · assumption
       · intro k'
         intro hk'
-        simp at hk'
+        simp only [not_lt_zero'] at hk'
 
 theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 (ψ 𝓤 ψ)) ≡ (ϕ 𝓤 ψ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
-  simp [Satisfaction.Satisfies]
+  simp only [Worlds, eq_iff_iff]
+  simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl, world_satisfies_ltl]
   constructor
   · intro h
@@ -854,13 +854,13 @@ theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ �
       · assumption
       · intro k
         intro hk
-        simp at hk
+        simp only [not_lt_zero'] at hk
     · assumption
 
 theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ □ ♢ ϕ) ≡ (□ ♢ ϕ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   rw [world_satisfies_eventually]
   constructor
   · intro h
@@ -881,9 +881,9 @@ theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ 
     assumption
 
 theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
-  simp [Equivalent.Equiv]
+  simp only [Equivalent.Equiv]
   funext σ
-  simp [Worlds]
+  simp only [Worlds, eq_iff_iff]
   rw [world_satisfies_always]
   constructor
   · intro h
@@ -908,7 +908,7 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
   funext σ
   simp only [Worlds]
   rw [world_satisfies_or]
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies, and_def, eq_iff_iff]
   constructor
   · intro h
     rw [world_satisfies_ltl] at h
@@ -957,7 +957,7 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
         rw [Suffix.zero_identity]
         constructor
         · assumption
-        · simp
+        · simp only [not_lt_zero', IsEmpty.forall_iff, implies_true]
     | inr hr =>
         rw [world_satisfies_ltl] at hr
         obtain ⟨hll, hrr⟩ := hr
@@ -988,7 +988,7 @@ theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ
   simp only [Worlds]
   rw [propext_iff]
   rw [world_satisfies_weakuntil, world_satisfies_or, world_satisfies_and, world_satisfies_next, world_satisfies_weakuntil]
-  simp [And.and, Or.or, Not.not]
+  simp only [Or.or, And.and]
 
   have huntil := ltl_expansion_until ϕ ψ
   simp only [Equivalent.Equiv] at huntil
@@ -1002,7 +1002,7 @@ theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ
     | inl h =>
       rw [huntil] at h
       rw [world_satisfies_or, world_satisfies_and, world_satisfies_next] at h
-      simp only [And.and, Or.or] at h
+      simp only [Or.or, And.and] at h
       cases h with
       | inl h =>
         left
@@ -1043,7 +1043,7 @@ theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ
         left
         rw [huntil]
         rw [world_satisfies_or, world_satisfies_and, world_satisfies_next]
-        simp only [And.and, Or.or]
+        simp only [Or.or, And.and]
         right
         constructor <;> assumption
       | inr h =>
@@ -1066,7 +1066,7 @@ theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ 
   funext σ
   simp only [Worlds]
   rw [world_satisfies_or]
-  simp
+  simp only [eq_iff_iff]
   constructor
   · intro h
     rw [world_satisfies_eventually] at h
@@ -1106,7 +1106,7 @@ theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ 
   funext σ
   simp only [Worlds]
   rw [world_satisfies_and]
-  simp
+  simp only [eq_iff_iff]
   rw [world_satisfies_next]
   repeat rw [world_satisfies_always]
   constructor
@@ -1137,7 +1137,7 @@ theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (�
   simp only [Worlds]
   rw [world_satisfies_next]
   repeat rw [world_satisfies_until]
-  simp
+  simp only [eq_iff_iff]
   constructor
   · intro h
     obtain ⟨j, hj⟩ := h
@@ -1256,7 +1256,7 @@ def solution_of_expansion_law_upper {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set 
 theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_lower ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law_lower ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
   unfold solution_of_expansion_law_lower
   unfold Worlds
-  simp
+  simp only [Set.union_subset_iff, and_imp]
   constructor
 
   -- we first show that it is indeed a solution
@@ -1272,7 +1272,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
       · assumption
       · intro k
         intro hk
-        simp at hk
+        simp only [not_lt_zero'] at hk
     · intro σ
       intro h
       rw [Set.mem_sep_iff] at h
@@ -1325,7 +1325,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
       | zero =>
         intro n
         intro hn
-        simp at hn
+        simp only [add_zero] at hn
         rw [← hn]
         assumption
       | succ m ih =>
@@ -1352,7 +1352,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
 
     have h₀ : σ[0…] ∈ P := by
       apply b j 0
-      simp
+      simp only [zero_add]
 
     rw [Suffix.zero_identity] at h₀
     assumption
@@ -1360,7 +1360,7 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
 
 theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_upper ϕ ψ (Worlds (ϕ 𝓦 ψ))) ∧ (∀ P, (solution_of_expansion_law_upper ϕ ψ P) → P ⊆ Worlds (ϕ 𝓦 ψ)) := by
   unfold solution_of_expansion_law_upper Worlds
-  simp [And.and]
+  simp only [And.and]
 
   have hwu := ltl_expansion_weakuntil ϕ ψ
   simp only [Equivalent.Equiv] at hwu
@@ -1377,7 +1377,7 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
     simp only [Worlds] at hwu
     rw [hwu] at hσ
     rw [world_satisfies_or, world_satisfies_and, world_satisfies_next] at hσ
-    simp only [And.and, Or.or] at hσ
+    simp only [Or.or, And.and] at hσ
     assumption
 
   -- now we show that it is the greatest solution
@@ -1396,9 +1396,9 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
           specialize hψ 0
           rw [Suffix.zero_identity] at hψ
           rw [Suffix.zero_identity]
-          simp [Not.not] at hψ
+          simp only [Not.not] at hψ
           rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
-          simp [hψ] at h
+          simp only [hψ, false_or] at h
           rw [Set.setOf_app_iff, Set.mem_def] at h
           obtain ⟨hl, hr⟩ := h
           ring_nf
@@ -1406,10 +1406,10 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
         | succ k ih =>
           obtain ⟨hl, hr⟩ := ih
           specialize hψ (k + 1)
-          simp [Not.not] at hψ
+          simp only [Not.not] at hψ
           specialize h (Suffix σ (k + 1)) hr
           rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
-          simp [hψ] at h
+          simp only [hψ, false_or] at h
           rw [Set.setOf_app_iff, Set.mem_def] at h
           rw [Suffix.composition] at h
           assumption
@@ -1420,33 +1420,33 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
       obtain ⟨hl, hr⟩ := h'
       assumption
     else
-      simp [Not.not] at hψ
+      simp only [Not.not, not_forall, not_not] at hψ
       have hψ' := satisfies_for_first_time_iff_satisfies ψ σ hψ
       obtain ⟨i, hi⟩ := hψ'
       obtain ⟨hil, hir⟩ := hi
       left
       use i
-      simp [And.and, hil]
+      simp only [And.and, hil, true_and]
 
       let h' (k : ℕ) : k < i → ((Suffix σ k ⊨ ϕ) ∧ (Suffix σ (k + 1) ∈ P)) := by
         induction k with
         | zero =>
           if c : 0 < i then
-            simp [c]
+            simp only [c, zero_add, forall_const]
             specialize hir 0 c
-            simp [Not.not] at hir
+            simp only [Not.not] at hir
             specialize h σ hσ
             rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
             rw [Suffix.zero_identity] at hir
-            simp [hir] at h
+            simp only [hir, false_or] at h
             rw [Set.setOf_app_iff, Set.mem_def] at h
             rw [Suffix.zero_identity]
             assumption
           else
-            simp [c]
+            simp only [c, zero_add, IsEmpty.forall_iff]
         | succ n ih =>
           if c : n + 1 < i then
-            simp [c]
+            simp only [c, forall_const]
             have hn : n < i := Nat.lt_trans (lt_add_one n) c
             specialize ih hn
             obtain ⟨hl, hr⟩ := ih
@@ -1454,12 +1454,12 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
             rw [Set.mem_def, Set.setOf_app_iff, Set.mem_def, Set.mem_def] at h
             rw [Set.setOf_app_iff, Set.mem_def] at h
             specialize hir (n + 1) c
-            simp [Not.not] at hir
-            simp [hir] at h
+            simp only [Not.not] at hir
+            simp only [hir, false_or] at h
             rw [Suffix.composition] at h
             assumption
           else
-            simp [c]
+            simp only [c, IsEmpty.forall_iff]
 
       intro k hk
       specialize h' k hk
@@ -1484,17 +1484,17 @@ def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ
   rw [PLFormula.toLTLFormula_or]
   simp only [or_def, not_def, and_def]
   repeat rw [world_satisfies_ltl]
-  simp [Or.or, Not.not]
+  simp only [Not.not, Or.or]
   constructor
   · intro h
     contrapose h
-    simp at h
-    simp
+    simp only [not_or] at h
+    simp only [not_not]
     assumption
   · intro h
     contrapose h
-    simp at h
-    simp
+    simp only [not_not] at h
+    simp only [not_or]
     assumption
 
 def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
@@ -1527,15 +1527,15 @@ instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (Set (World AP)) := 
 Some auxiliary lemmas about satisfaction of LT properties.
 -/
 theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) : TSwts ⊨ P ↔ ∀ π, (h: π ∈ Paths TSwts.TS) → TraceFromPathWTS π h ∈ P := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
   rw [TracesWTS]
-  simp
+  simp only [Set.mem_setOf_eq, Set.iUnion_subset_iff]
   constructor
   · intro h
     intro π
     intro h'
     rw [Paths] at h'
-    simp at h'
+    simp only [Set.mem_setOf_eq] at h'
     rw [isPath] at h'
     obtain ⟨hinit, hmax⟩ := h'
     rw [isInitialPathFragment] at hinit
@@ -1548,7 +1548,7 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
     use π
     use path_starts_from_startState π h'
     unfold TraceFromPathFromInitialStateWTS
-    simp
+    simp only
   · intro h
     intro s
     intro h'
@@ -1562,8 +1562,8 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
     have h₀: π ∈ Paths TSwts.TS := by
       rw [Paths]
       rw [PathsFromState] at hπ'
-      simp at hπ'
-      simp
+      simp only [Set.mem_setOf_eq] at hπ'
+      simp only [Set.mem_setOf_eq]
       unfold isPath
       obtain ⟨hl, hr⟩ := hπ'
       constructor
@@ -1581,7 +1581,7 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
 We now prove a theorem about **Trace Inclusion and LT Properties**.
 -/
 theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : (TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂) ↔ ∀ (P: LTProperty AP), TSwts₂ ⊨ P → TSwts₁ ⊨ P := by
-  simp [Satisfaction.Satisfies]
+  simp only [Satisfaction.Satisfies]
   constructor
   · intro h
     intro P
@@ -1597,7 +1597,7 @@ theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transiti
     assumption
   · intro h
     specialize h (TracesWTS TSwts₂)
-    simp at h
+    simp only [subset_refl, forall_const] at h
     assumption
 
 
@@ -1657,32 +1657,32 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
     · intro s
       intro hs
       rw [Reach] at hs
-      simp at hs
+      simp only [Set.mem_setOf_eq] at hs
       unfold isReachableState at hs
       obtain ⟨e, he⟩ := hs
       obtain ⟨hel, her⟩ := he
       let πtail : FinitePathFragment TS := finiteExecutionFragmentToFinitePathFragment e
       have htail : πtail.states = e.states := by
         unfold πtail finiteExecutionFragmentToFinitePathFragment
-        simp
+        simp only
       have en : e.n = πtail.n := by
         unfold πtail finiteExecutionFragmentToFinitePathFragment
-        simp
-      simp at en
-      simp at htail
+        simp only
+      simp only at en
+      simp only at htail
       have hhead : ∃ π', π' ∈ PathsFromState s := path_originates_from_state_if_noTerminalState hTS s
       obtain ⟨πhead, hπhead⟩ := hhead
-      simp at πhead
-      simp at h'
-      simp at s
+      simp only at πhead
+      simp only at h'
+      simp only at s
       cases c: πhead with
       | finite p =>
         rw [c] at hπhead
         unfold PathsFromState at hπhead
-        simp at hπhead
+        simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨hπheadmax, _⟩ := hπhead
         unfold isMaximalPathFragment endStatePathFragment at hπheadmax
-        simp at hπheadmax
+        simp only at hπheadmax
         specialize hTS (p.states (Fin.last p.n))
         contradiction
       | infinite p =>
@@ -1690,48 +1690,48 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         obtain ⟨headStates, headValid⟩ := p
 
         unfold PathsFromState startStatePathFragment at hπhead
-        simp at hπhead
+        simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨_, headState0⟩ := hπhead
 
         -- combine πtail and πhead to form a path
         let π := PathFragment.infinite (PathFragment.concatenate_finite_and_infinite πtail ⟨headStates, headValid⟩ (by
           rw [htail]
           unfold endStateExecutionFragment at her
-          simp
+          simp only
           rw [headState0]
           have heq : Fin.last e.n = Fin.last πtail.n := by
             rw [← Fin.natCast_eq_last]
             rw [← Fin.natCast_eq_last]
-            simp [en]
+            simp only [en, Fin.natCast_eq_last]
           rw [← heq]
           assumption
           ))
 
         have hπ : π ∈ Paths TS := by
           unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment
-          simp
+          simp only [Set.mem_setOf_eq]
           constructor
           · unfold startStatePathFragment π
-            simp
+            simp only
             unfold isInitialExecutionFragment startStateExecutionFragment at hel
-            simp at hel
+            simp only at hel
             unfold PathFragment.concatenate_finite_and_infinite
-            simp
+            simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le]
             cases cc: e.n with
             | zero =>
               rw [headState0]
-              simp [← en, cc]
+              simp only [← en, cc, lt_self_iff_false, ↓reduceIte]
               unfold endStateExecutionFragment at her
               rw [← Fin.natCast_eq_last] at her
-              simp [cc] at her
+              simp only [cc, Nat.cast_zero] at her
               rw [← her]
-              simp [hel]
+              simp only [hel]
             | succ m =>
               rw [htail]
-              simp [← en, cc]
+              simp only [← en, cc, lt_add_iff_pos_left, add_pos_iff, Nat.lt_one_iff, pos_of_gt, or_true, ↓reduceIte]
               apply hel
           · unfold π
-            simp
+            simp only
 
         specialize h' π hπ
         rw [hϕ] at h'
@@ -1742,22 +1742,22 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         have hs : (@TraceFromPathWTS AP ⟨TS, hTS⟩ π hπ) e.n = TS.L s := by
           unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
           unfold Paths isPath at hπ
-          simp at hπ
+          simp only [Set.mem_setOf_eq] at hπ
           obtain ⟨hπl, hπr⟩ := hπ
           rw [maximalIffInfinitePathFragment hTS'] at hπr
-          simp
+          simp only
           match c: π with
           | PathFragment.finite p =>
-            simp
+            simp only
             contradiction
           | PathFragment.infinite p =>
-            simp
+            simp only
             unfold endStateExecutionFragment at her
             unfold π at c
-            simp at c
+            simp only [PathFragment.infinite.injEq] at c
             rw [← c]
             unfold PathFragment.concatenate_finite_and_infinite
-            simp [en]
+            simp only [en, lt_self_iff_false, ↓reduceIte, tsub_self]
             rw [headState0]
 
         rw [hs] at h'
@@ -1765,46 +1765,46 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
   · intro h'
     intro π
     intro hπ
-    simp at π
-    simp at hπ
+    simp only at π
+    simp only at hπ
     obtain ⟨Φ, hΦ⟩ := h'
     obtain ⟨hΦl, hΦr⟩ := hΦ
     unfold isInvariantWithCondition at hΦl
-    simp at hΦr
+    simp only at hΦr
     rw [hΦl, Set.mem_def, Set.setOf_app_iff]
     intro n
     unfold TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
     cases π with
     | finite _ =>
       unfold Paths isPath at hπ
-      simp at hπ
+      simp only [Set.mem_setOf_eq] at hπ
       obtain ⟨hπl, hπr⟩ := hπ
-      simp
+      simp only
       contradiction
     | infinite p =>
-      simp
+      simp only
       have hreach : p.states n ∈ Reach TS := by
         unfold Reach isReachableState
-        simp
+        simp only [Set.mem_setOf_eq]
         let eInf := infinitePathFragmentToInfiniteExecutionFragment p
         let e : FiniteExecutionFragment TS := ⟨n, fun i => eInf.states i, fun i => eInf.actions i, by
           intro i
-          simp
+          simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
           exact eInf.valid i⟩
         use e
         constructor
         · unfold isInitialExecutionFragment startStateExecutionFragment
-          simp
+          simp only
           unfold Paths isPath at hπ
-          simp at hπ
+          simp only [Set.mem_setOf_eq] at hπ
           obtain ⟨hπl, hπr⟩ := hπ
           unfold isInitialPathFragment startStatePathFragment at hπl
-          simp at hπl
+          simp only at hπl
           unfold e eInf infinitePathFragmentToInfiniteExecutionFragment
-          simp
+          simp only [Fin.val_zero]
           assumption
         · unfold endStateExecutionFragment e eInf infinitePathFragmentToInfiniteExecutionFragment
-          simp
+          simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast, Fin.val_last]
       specialize hΦr (p.states n) hreach
       assumption
 
@@ -1831,21 +1831,21 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
   constructor
   · intro h₁
     by_contra h₂
-    simp at h₂
+    simp only [not_forall, Classical.not_imp, not_not] at h₂
     obtain ⟨ω, hω⟩ := h₂
     obtain ⟨hω₁, hω₂⟩ := hω
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies] at h₁
     unfold TracesWTS at h₁
-    simp at h₁
+    simp only [Set.mem_setOf_eq, Set.iUnion_subset_iff] at h₁
     unfold BadPref isBadPrefix at hω₁
-    simp at hω₁
+    simp only [Set.mem_setOf_eq] at hω₁
     obtain ⟨_, hω₁⟩ := hω₁
-    simp [Membership.mem] at hω₂
+    simp only [Membership.mem] at hω₂
     obtain ⟨s, hs⟩ := hω₂
     obtain ⟨hsi, hp⟩ := hs
     rw [Set.mem_def, Set.setOf_app_iff] at hsi
     unfold TracesFinFromState at hp
-    simp at hp
+    simp only [Set.mem_image] at hp
     obtain ⟨π, hπ⟩ := hp
     obtain ⟨hπl, hπr⟩ := hπ
     let hinfπ := path_originates_from_state_if_noTerminalState hTS (π.states (Fin.last π.n))
@@ -1854,19 +1854,19 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
     match πinf with
     | PathFragment.finite p =>
       unfold PathsFromState at hπinf
-      simp at hπinf
+      simp only [Set.mem_setOf_eq] at hπinf
       obtain ⟨hmax, _⟩ := hπinf
       unfold isMaximalPathFragment endStatePathFragment at hmax
-      simp at hmax
+      simp only at hmax
       specialize hTS (p.states (Fin.last p.n))
       contradiction
     | PathFragment.infinite p =>
       have hcont : π.states (Fin.last π.n) = p.states 0 := by
         unfold PathsFromState at hπinf
-        simp at hπinf
+        simp only [Set.mem_setOf_eq] at hπinf
         obtain ⟨_, hstart⟩ := hπinf
         unfold startStatePathFragment at hstart
-        simp at hstart
+        simp only at hstart
         rw [hstart]
       let π' := PathFragment.concatenate_finite_and_infinite π p hcont
 
@@ -1875,83 +1875,84 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       have hpref : Prefix σ ω.n = ω := by
         unfold Prefix
         obtain ⟨n, f⟩ := ω
-        simp
+        simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
         funext i
         unfold σ Trace InfiniteTraceFromInfinitePathFragment π' PathFragment.concatenate_finite_and_infinite
-        simp
+        simp only
         unfold FiniteTraceFromFinitePathFragment at hπr
-        simp at hπr
+        simp only [AbstractFiniteWorld.mk.injEq] at hπr
         obtain ⟨heq, hfeq⟩ := hπr
         rw [propext (Fin.heq_fun_iff (congrFun (congrArg HAdd.hAdd heq) 1))] at hfeq
         if c: i < n then
           have h': (i: ℕ) < π.n := by
             rw [heq]
             rw [@Fin.lt_iff_val_lt_val] at c
-            simp at c
-            simp [c]
+            simp only [Fin.natCast_eq_last, Fin.val_last] at c
+            simp only [c]
           have h'' : (i: ℕ) < π.n + 1 := by
             apply Nat.lt_add_one_of_lt
             assumption
-          simp [h']
+          simp only [h', ↓reduceIte]
           rw [hfeq]
-          simp [Nat.mod_eq_of_lt h'']
+          simp only [Fin.val_natCast, Nat.mod_eq_of_lt h'', Fin.eta]
         else
-          simp at c
+          simp only [Fin.natCast_eq_last, not_lt, Fin.last_le_iff] at c
           rw [c]
-          simp
-          simp [heq]
+          simp only [Fin.val_last]
+          simp only [heq, lt_self_iff_false, ↓reduceIte, tsub_self]
           specialize hfeq i
-          simp [c] at hfeq
+          simp only [c, Fin.val_last, Fin.val_natCast] at hfeq
           rw [← hcont, ← Fin.natCast_eq_last]
-          simp [heq]
+          simp only [heq]
           rw [hfeq]
-          simp [heq]
+          simp only [heq, Nat.mod_succ]
           unfold Fin.last
-          simp
+          simp only
       specialize hω₁ σ hpref
       specialize h₁ s hsi
       unfold TracesFromInitialStateWTS at h₁
       rw [Set.setOf_subset] at h₁
-      simp at h₁
+      simp only [forall_exists_index] at h₁
 
       specialize h₁ Trace (PathFragment.infinite π')
       have hpath : (PathFragment.infinite π') ∈ PathsFromState s := by
         unfold π' PathFragment.concatenate_finite_and_infinite PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment
-        simp
+        simp only [Set.mem_setOf_eq, Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le, true_and]
         if c: 0 < π.n then
-          simp [c]
+          simp only [c, ↓reduceIte]
           unfold PathsFinFromState startStatePathFragment at hπl
-          simp at hπl
+          simp only [Set.mem_setOf_eq] at hπl
           assumption
         else
-          simp [c]
-          simp at c
+          simp only [c, ↓reduceIte]
+          simp only [not_lt, nonpos_iff_eq_zero] at c
           unfold PathsFinFromState startStatePathFragment at hπl
-          simp at hπl
+          simp only [Set.mem_setOf_eq] at hπl
           rw [← hcont, ← hπl]
           rw [← Fin.natCast_eq_last]
-          simp [c]
+          simp only [c, Nat.cast_zero]
 
       specialize h₁ hpath
       have htr : Trace = TraceFromPathFromInitialStateWTS s (PathFragment.infinite π') hpath hsi := by
         unfold Trace TraceFromPathFromInitialStateWTS TraceFromPathWTS
-        simp
+        simp only
 
       rw [htr] at h₁
-      simp at h₁
+      simp only [forall_const] at h₁
       rw [← htr] at h₁
       unfold σ at hω₁
       contradiction
   · intro h₁
     by_contra h₂
-    simp [Satisfaction.Satisfies] at h₂
+    simp only [Satisfaction.Satisfies] at h₂
     unfold TracesWTS TracesFromInitialStateWTS at h₂
-    simp at h₂
+    simp only [Set.mem_setOf_eq, Set.iUnion_subset_iff, not_forall] at h₂
     obtain ⟨s, hs, h₂⟩ := h₂
     rw [Set.subset_def] at h₂
-    simp at h₂
-    obtain ⟨trace, hπ, h₂⟩ := h₂
-    obtain ⟨π, hπpath, hπ⟩ := hπ
+    simp only [Set.mem_setOf_eq, forall_exists_index, not_forall, Classical.not_imp,
+      exists_and_right] at h₂
+    obtain ⟨trace, π, hπpath, h₂⟩ := h₂
+    obtain ⟨hπ, h₂⟩ := h₂
 
     let hsafe := h
     unfold isSafetyProperty at h
@@ -1961,19 +1962,19 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
     let ω : FiniteWorld AP := ⟨nω, fun i => trace i⟩
     specialize h₁ ω
     unfold BadPref isBadPrefix at h₁
-    simp [hsafe] at h₁
+    simp only [hsafe, Set.mem_setOf_eq, ω] at h₁
     have h' : True ∧ ∀ (σ : World AP), Prefix σ ω.n = ω → σ ∉ P := by constructor <;> trivial
     apply h₁ at h'
     unfold TracesFin TracesFinFromState at h'
-    simp at h'
-    simp [Membership.mem] at h'
-    simp [Set.Mem] at h'
+    simp only [Set.mem_setOf_eq, Set.mem_image, not_exists, not_and, ω] at h'
+    simp only [Membership.mem, ω] at h'
+    simp only [Set.Mem, ω] at h'
     specialize h' s hs
 
     match π with
     | PathFragment.finite p =>
       unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπpath
-      simp at hπpath
+      simp only [Set.mem_setOf_eq] at hπpath
       obtain ⟨hπl, hπr⟩ := hπpath
       specialize hTS (p.states (Fin.last p.n))
       contradiction
@@ -1981,25 +1982,25 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       let πfin : FinitePathFragment TSwts.TS := ⟨nω, fun i => p.states i, by
       intro i
       have hv := p.valid i
-      simp
+      simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
       exact hv⟩
       specialize h' πfin
 
       have h₀ : PathsFinFromState s πfin := by
         unfold PathsFinFromState startStatePathFragment πfin
         rw [Set.setOf_app_iff]
-        simp
+        simp only [Fin.val_zero]
         unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπpath
-        simp at hπpath
+        simp only [Set.mem_setOf_eq, true_and] at hπpath
         assumption
 
       have h₀' : FiniteTraceFromFinitePathFragment πfin = { n := nω, f := ω.f } := by
         unfold FiniteTraceFromFinitePathFragment πfin ω
-        simp
+        simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast,  AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
         funext i
         rw [hπ]
         unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
-        simp
+        simp only
 
       apply h' at h₀
       apply h₀ at h₀'
@@ -2029,7 +2030,7 @@ theorem closure_contains_property {AP: Type} (P: LTProperty AP) : P ⊆ (closure
   intro ω hω
   rw [Set.mem_iUnion]
   use σ
-  simp
+  simp only [Set.mem_iUnion, exists_prop]
   exact ⟨hσ, hω⟩
 
 theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ closureLTProperty P = P := by
@@ -2039,7 +2040,7 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     constructor
     · rw [Set.subset_def]
       by_contra hc
-      simp at hc
+      simp only [not_forall, Classical.not_imp] at hc
       obtain ⟨σ, hc⟩ := hc
       obtain ⟨hclos, hσ⟩ := hc
       unfold isSafetyProperty at h₁
@@ -2052,7 +2053,7 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
         unfold pref
         rw [Set.mem_def]
         use n)
-      simp at hclos
+      simp only [Set.mem_iUnion, exists_prop] at hclos
       obtain ⟨σ', hσ'⟩ := hclos
       specialize h₁ σ'
       obtain ⟨hl, hr⟩ := hσ'
@@ -2061,12 +2062,12 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
       obtain ⟨m, hr⟩ := hr
       have hnm : n = m := by
         unfold Prefix at hr
-        simp at hr
+        simp only [AbstractFiniteWorld.mk.injEq] at hr
         obtain ⟨h', _⟩ := hr
         assumption
       rw [← hnm] at hr
       rw [Eq.symm hr] at h₁
-      simp [hr] at h₁
+      simp only [hr, forall_const] at h₁
       contradiction
     · apply closure_contains_property
   · intro h₁
@@ -2079,7 +2080,7 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     rw [Set.not_subset_iff_exists_mem_not_mem] at hσ
     obtain ⟨ω, hω⟩ := hσ
     obtain ⟨hpref, hp⟩ := hω
-    simp at hp
+    simp only [Set.mem_iUnion, exists_prop, not_exists, not_and] at hp
     unfold pref at hpref
     rw [Set.mem_def] at hpref
     obtain ⟨n, hpref⟩ := hpref
@@ -2090,7 +2091,7 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     specialize hp σ' hc
     unfold pref at hp
     rw [Set.mem_def] at hp
-    simp at hp
+    simp only [not_exists] at hp
     specialize hp n
     rw [← hσ'] at hp
     contradiction
@@ -2103,7 +2104,7 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
     rw [Set.mem_def, Set.setOf_app_iff] at hσ
     unfold prefLTProperty at hσ
     rw [Set.subset_def] at hσ
-    simp at hσ
+    simp only [Set.mem_iUnion, exists_prop, not_forall, Classical.not_imp, not_exists, not_and] at hσ
     obtain ⟨ω, hω⟩ := hσ
     obtain ⟨hωl, hωr⟩ := hω
     unfold pref at hωl
@@ -2114,7 +2115,7 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
     intro σ' hσ'
     unfold closureLTProperty prefLTProperty
     rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def]
-    simp
+    simp only [Set.mem_iUnion, exists_prop, not_forall, Classical.not_imp, not_exists, not_and]
     use ω
     constructor
     · unfold pref
@@ -2122,7 +2123,7 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
       use n
       rw [hσ']
     · assumption
-  · simp [Satisfaction.Satisfies]
+  · simp only [Satisfaction.Satisfies]
     unfold closureLTProperty
     rw [Set.subset_def]
     intro σ hσ
@@ -2132,7 +2133,7 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
     intro ω hω
     rw [Set.mem_iUnion]
     use σ
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
     exact ⟨hσ, hω⟩
 
 theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : TracesFin TSwts.TS = prefLTProperty (TracesWTS TSwts) := by
@@ -2143,12 +2144,12 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     unfold TracesFin at ht
     rw [Set.mem_def, Set.setOf_app_iff] at ht
     obtain ⟨s, hs, ht⟩ := ht
-    simp at hs
+    simp only [Set.mem_setOf_eq] at hs
     unfold TracesFinFromState at ht
-    simp at ht
+    simp only [Set.mem_image] at ht
     obtain ⟨πtail, hπ⟩ := ht
     obtain ⟨hπl, hπr⟩ := hπ
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
 
     -- create a full path
     let hπhead := path_originates_from_state_if_noTerminalState TSwts.h (πtail.states (Fin.last πtail.n))
@@ -2156,42 +2157,42 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     match πhead with
     | PathFragment.finite p =>
       unfold PathsFromState at hπhead
-      simp at hπhead
+      simp only [Set.mem_setOf_eq] at hπhead
       obtain ⟨hπheadmax, _⟩ := hπhead
       unfold isMaximalPathFragment endStatePathFragment at hπheadmax
-      simp at hπheadmax
+      simp only at hπheadmax
       obtain ⟨_, hTS⟩ := TSwts
       specialize hTS (p.states (Fin.last p.n))
       contradiction
     | PathFragment.infinite p =>
       let π := PathFragment.concatenate_finite_and_infinite πtail p (by
         unfold PathsFromState startStatePathFragment at hπhead
-        simp at hπhead
+        simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨hπheadl, hπheadr⟩ := hπhead
         rw [hπheadr]
       )
       have htrace : PathFragment.infinite π ∈ TSwts.TS.Paths := by
         unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment startStatePathFragment
-        simp
+        simp only [Set.mem_setOf_eq, and_true]
         unfold π PathFragment.concatenate_finite_and_infinite
-        simp
+        simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le]
         if c: 0 < πtail.n then
-          simp [c]
+          simp only [c, ↓reduceIte]
           unfold PathsFinFromState startStatePathFragment at hπl
-          simp at hπl
+          simp only [Set.mem_setOf_eq] at hπl
           rw [hπl]
           assumption
         else
-          simp [c]
-          simp at c
+          simp only [c, ↓reduceIte]
+          simp only [not_lt, nonpos_iff_eq_zero] at c
           unfold PathsFinFromState startStatePathFragment at hπl
-          simp at hπl
+          simp only [Set.mem_setOf_eq] at hπl
           unfold PathsFromState startStatePathFragment at hπhead
-          simp at hπhead
+          simp only [Set.mem_setOf_eq] at hπhead
           obtain ⟨_, hπhead⟩ := hπhead
           rw [hπhead]
           rw [← Fin.natCast_eq_last]
-          simp [c]
+          simp only [c, Nat.cast_zero]
           rw [hπl]
           assumption
       let trace := TraceFromPathWTS (PathFragment.infinite π) htrace
@@ -2199,69 +2200,69 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
       constructor
       · unfold trace TracesWTS TracesFromInitialStateWTS TraceFromPathWTS
         rw [Set.mem_iUnion]
-        simp
+        simp only [Set.mem_setOf_eq, Set.mem_iUnion]
         use s, hs
         use (PathFragment.infinite π)
         use (by
           unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment π
           unfold PathFragment.concatenate_finite_and_infinite
-          simp
+          simp only [Set.mem_setOf_eq, Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le, true_and]
           if c: 0 < πtail.n then
-            simp [c]
+            simp only [c, ↓reduceIte]
             unfold PathsFinFromState startStatePathFragment at hπl
-            simp at hπl
+            simp only [Set.mem_setOf_eq] at hπl
             rw [hπl]
           else
-            simp [c]
-            simp at c
+            simp only [c, ↓reduceIte]
+            simp only [not_lt, nonpos_iff_eq_zero] at c
             unfold PathsFinFromState startStatePathFragment at hπl
-            simp at hπl
+            simp only [Set.mem_setOf_eq] at hπl
             unfold PathsFromState startStatePathFragment at hπhead
-            simp at hπhead
+            simp only [Set.mem_setOf_eq] at hπhead
             obtain ⟨_, hπhead⟩ := hπhead
             rw [hπhead]
             rw [← Fin.natCast_eq_last]
-            simp [c]
+            simp only [c, Nat.cast_zero]
             rw [hπl])
         unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS
-        simp
+        simp only
       · unfold pref
         rw [Set.mem_def]
         use t.n
         rw [← hπr]
         unfold FiniteTraceFromFinitePathFragment
         unfold Prefix
-        simp
+        simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
         funext i
         unfold trace π PathFragment.concatenate_finite_and_infinite TraceFromPathWTS InfiniteTraceFromInfinitePathFragment
-        simp
+        simp only [Fin.cast_val_eq_self]
         if c: ↑i < πtail.n then
-          simp [c]
+          simp only [c, ↓reduceIte]
         else
           obtain ⟨i, hi⟩ := i
-          simp [c]
-          simp at c
+          simp only [c, ↓reduceIte]
+          simp only [not_lt] at c
           have h': i ≤ πtail.n := by
             rw [Nat.le_iff_lt_add_one]
             assumption
           have heq : i = πtail.n := by apply Nat.le_antisymm <;> assumption
-          simp [heq]
+          simp only [heq, tsub_self]
           unfold PathsFromState startStatePathFragment at hπhead
-          simp at hπhead
+          simp only [Set.mem_setOf_eq] at hπhead
           obtain ⟨_, hπhead⟩ := hπhead
           rw [hπhead]
           aesop
 
   · intro t ht
     unfold TracesFin TracesFinFromState
-    simp
+    simp only [Set.mem_setOf_eq, Set.mem_image]
     rw [Set.mem_iUnion] at ht
     obtain ⟨T, hT⟩ := ht
     rw [Set.mem_iUnion] at hT
     obtain ⟨hT₁, hT₂⟩ := hT
     unfold TracesWTS TracesFromInitialStateWTS at hT₁
     rw [Set.mem_iUnion] at hT₁
-    simp at hT₁
+    simp only [Set.mem_setOf_eq, Set.mem_iUnion] at hT₁
     obtain ⟨s, hs, hT₁⟩ := hT₁
     use s, hs
     obtain ⟨π, hπ, hT₁⟩ := hT₁
@@ -2271,35 +2272,35 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     cases π with
     | finite p =>
       unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
-      simp at hπ
+      simp only [Set.mem_setOf_eq] at hπ
       obtain ⟨hπ, _⟩ := hπ
       obtain ⟨_, hTS⟩ := TSwts
       specialize hTS (p.states (Fin.last p.n))
       contradiction
     | infinite p =>
       unfold InfiniteTraceFromInfinitePathFragment at hT₁
-      simp at hT₁
+      simp only at hT₁
       rw [hT₁] at hT₂
-      simp at hT₂
+      simp only at hT₂
       let πfin : FinitePathFragment TSwts.TS := ⟨t.n, fun i => p.states i, by
         intro i
         have hv := p.valid i
-        simp
+        simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
         exact hv⟩
       use πfin
       unfold PathsFinFromState startStatePathFragment
-      simp
+      simp only [Set.mem_setOf_eq]
       constructor
       · unfold πfin
-        simp
+        simp only [Fin.val_zero]
         unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
-        simp at hπ
+        simp only [Set.mem_setOf_eq, true_and] at hπ
         assumption
       · unfold FiniteTraceFromFinitePathFragment πfin
-        simp
+        simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast]
         obtain ⟨n, f⟩ := t
-        simp
-        simp at hT₂
+        simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
+        simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq] at hT₂
         rw [hT₂]
 
 theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTProperty (closureLTProperty P) = prefLTProperty P := by
@@ -2310,9 +2311,9 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
     intro ω hω
     rw [Set.mem_iUnion] at hω
     obtain ⟨σ, hσ, hω⟩ := hω
-    simp at hω
+    simp only [Set.mem_range, exists_prop] at hω
     rw [Set.mem_iUnion]
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
     obtain ⟨hω₁, hω₂⟩ := hω
     obtain ⟨hω₁, hω₃⟩ := hω₁
     rw [← hω₃] at hω₂
@@ -2322,7 +2323,7 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
     rw [Set.subset_def] at hω₁
     specialize hω₁ ω hω₂
     rw [Set.mem_iUnion] at hω₁
-    simp at hω₁
+    simp only [Set.mem_iUnion, exists_prop] at hω₁
     obtain ⟨σ', hσ', hω₁⟩ := hω₁
     use σ'
   · unfold prefLTProperty
@@ -2330,9 +2331,9 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
     intro ω hω
     rw [Set.mem_iUnion] at hω
     obtain ⟨σ, hσ, hω⟩ := hω
-    simp at hω
+    simp only [Set.mem_range, exists_prop] at hω
     rw [Set.mem_iUnion]
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
     obtain ⟨hω₁, hω₂⟩ := hω
     obtain ⟨hω₁, hω₃⟩ := hω₁
     rw [← hω₃] at hω₂
@@ -2341,7 +2342,7 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
     rw [Set.mem_def, Set.setOf_app_iff]
     unfold prefLTProperty
     rw [Set.subset_def]
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
     constructor
     · intro ω' hω'
       use σ
@@ -2353,19 +2354,19 @@ theorem prefix_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P�
   intro ω hω
   unfold prefLTProperty at hω
   rw [Set.mem_iUnion] at hω
-  simp at hω
+  simp only [Set.mem_iUnion, exists_prop] at hω
   obtain ⟨σ, hσ, hω⟩ := hω
   specialize h σ hσ
   unfold prefLTProperty
   rw [Set.mem_iUnion]
-  simp
+  simp only [Set.mem_iUnion, exists_prop]
   use σ
 
 theorem closure_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P₂ → closureLTProperty P₁ ⊆ closureLTProperty P₂ := by
   intro h
   unfold closureLTProperty
   rw [Set.subset_def]
-  simp
+  simp only [Set.mem_setOf_eq]
   intro σ hσ
   rw [Set.subset_def]
   rw [Set.subset_def] at hσ
@@ -2384,10 +2385,10 @@ theorem prefix_distributes_over_union {AP: Type} (P Q: LTProperty AP) : prefLTPr
     unfold prefLTProperty at hσ
     rw [Set.mem_iUnion] at hσ
     obtain ⟨σ', p, hσ⟩ := hσ
-    simp at hσ
+    simp only [Set.mem_range, exists_prop] at hσ
     rw [Set.union_def]
     unfold prefLTProperty
-    simp
+    simp only [Set.mem_iUnion, exists_prop, Set.mem_setOf_eq]
     obtain ⟨hσ₁, hσ₂⟩ := hσ
     obtain ⟨hσ₁, hσ₃⟩ := hσ₁
     rw [← hσ₃] at hσ₂
@@ -2435,7 +2436,7 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
     -- or pref(Q) contains infinitely many prefixes of σ
     have h : (∀ n, ∃ k > n, Prefix σ k ∈ prefLTProperty P) ∨ (∀ n, ∃ k > n, Prefix σ k ∈ prefLTProperty Q) := by
       by_contra hc
-      simp [LTLFormula.Or.or] at hc
+      simp only [LTLFormula.Or.or, gt_iff_lt, not_or, not_forall, not_exists, not_and] at hc
       obtain ⟨h₁, h₂⟩ := hc
 
       obtain ⟨n₁, h₁⟩ := h₁
@@ -2444,11 +2445,11 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       have hn₁ : n₁ < n := by
         unfold n
         rw [Nat.lt_add_one_iff]
-        simp
+        simp only [le_add_iff_nonneg_right, zero_le]
       have hn₂ : n₂ < n := by
         unfold n
         rw [Nat.lt_add_one_iff]
-        simp
+        simp only [le_add_iff_nonneg_left, zero_le]
       specialize h₁ n hn₁
       specialize h₂ n hn₂
 
@@ -2464,7 +2465,7 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
     have hyp (S: LTProperty AP) (hP: ∀ (n : ℕ), ∃ k > n, Prefix σ k ∈ prefLTProperty S) : pref σ ⊆ prefLTProperty S := by
       rw [Set.subset_def]
       by_contra hc
-      simp at hc
+      simp only [not_forall, Classical.not_imp] at hc
       obtain ⟨ω, hω⟩ := hc
       obtain ⟨hω₁, hω₂⟩ := hω
       obtain ⟨n, f⟩ := ω
@@ -2473,12 +2474,12 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       obtain ⟨k, hk, hP⟩ := hP
       unfold prefLTProperty at hP
       rw [Set.mem_iUnion] at hP
-      simp at hP
+      simp only [Set.mem_iUnion, exists_prop] at hP
       obtain ⟨σ', hσ', hP⟩ := hP
 
       unfold prefLTProperty at hω₂
       rw [Set.mem_iUnion] at hω₂
-      simp at hω₂
+      simp only [Set.mem_iUnion, exists_prop, not_exists, not_and] at hω₂
       specialize hω₂ σ' hσ'
       unfold Prefix at hP
 
@@ -2487,26 +2488,26 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       rw [Set.mem_def]
       use n
       unfold Prefix
-      simp
+      simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
       funext i
 
       unfold pref Prefix at hP
       rw [Set.mem_def] at hP
-      simp at hP
+      simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq] at hP
       rw [funext_iff] at hP
       specialize hP i
-      simp at hP
+      simp only [Fin.val_natCast] at hP
       rw [Nat.mod_eq_of_lt] at hP
       rw [← hP]
 
       unfold pref Prefix at hω₁
       rw [Set.mem_def] at hω₁
-      simp at hω₁
+      simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq] at hω₁
       rw [funext_iff] at hω₁
       specialize hω₁ i
       exact hω₁
 
-      simp at hk
+      simp only [gt_iff_lt] at hk
       rw [← Nat.add_one_lt_add_one_iff] at hk
       have h'' : ↑i < n + 1 → ↑i < k + 1 := by
         intro h
@@ -2514,7 +2515,7 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
         exact h'''
 
       apply h''
-      simp
+      simp only [Fin.is_lt]
 
     cases h with
     | inl hP =>
@@ -2522,14 +2523,14 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       left
       let h' := hyp P hP
       unfold closureLTProperty
-      simp
+      simp only [Set.mem_setOf_eq]
       assumption
     | inr hQ =>
       rw [Set.mem_union]
       right
       let h' := hyp Q hQ
       unfold closureLTProperty
-      simp
+      simp only [Set.mem_setOf_eq]
       assumption
   · have h₁ : P ⊆ P ∪ Q := by
       rw [Set.subset_def]
@@ -2568,15 +2569,15 @@ theorem closure_idempotent {AP: Type} (P: LTProperty AP) : closureLTProperty (cl
     specialize hσ ω hω
     unfold prefLTProperty at hσ
     rw [Set.mem_iUnion] at hσ
-    simp at hσ
+    simp only [Set.mem_iUnion, exists_prop] at hσ
     unfold prefLTProperty
     rw [Set.mem_iUnion]
-    simp
+    simp only [Set.mem_iUnion, exists_prop]
     obtain ⟨σ', hσ', hω'⟩ := hσ
     rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def] at hσ'
     specialize hσ' ω hω'
     rw [Set.mem_iUnion] at hσ'
-    simp at hσ'
+    simp only [Set.mem_iUnion, exists_prop] at hσ'
     assumption
   · intro σ hσ
     apply closure_contains_property at hσ
@@ -2603,7 +2604,7 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
     have hclose := closure_of_traces TSwts₂
     obtain ⟨hclose₁, hclose₂⟩ := hclose
     specialize h₁ (closureLTProperty (TracesWTS TSwts₂)) hclose₁ hclose₂
-    simp [Satisfaction.Satisfies] at h₁
+    simp only [Satisfaction.Satisfies] at h₁
     have h₂ := finite_traces_are_prefixes TSwts₁
     have h₃ := finite_traces_are_prefixes TSwts₂
     have h₄ : prefLTProperty (TracesWTS TSwts₁) ⊆ prefLTProperty (closureLTProperty (TracesWTS TSwts₂)) := by
@@ -2612,7 +2613,7 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
       unfold prefLTProperty at hω
       rw [Set.mem_iUnion] at hω
       obtain ⟨σ, hσ, hω⟩ := hω
-      simp at hω
+      simp only [Set.mem_range, exists_prop] at hω
       obtain ⟨hω₁, hω₃⟩ := hω
       obtain ⟨hω₁, hω₂⟩ := hω₁
       rw [← hω₂] at hω₃
@@ -2620,7 +2621,7 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
       unfold prefLTProperty
       rw [Set.mem_iUnion]
       use σ
-      simp
+      simp only [Set.mem_iUnion, exists_prop]
       exact ⟨hω₁, hω₃⟩
     have h₅ := prefix_of_closure_is_prefix (TracesWTS TSwts₂)
 
@@ -2647,7 +2648,7 @@ theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : Transiti
       intro P hPsafe
       specialize h P hPsafe
       rw [h]
-      simp
+      simp only [imp_self]
     )
 
 
@@ -2667,93 +2668,93 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
     rw [finite_traces_are_prefixes]
     intro t ht
     unfold prefLTProperty at ht
-    simp at ht
+    simp only [Set.mem_iUnion, exists_prop] at ht
     obtain ⟨T, hT₁, hT₂⟩ := ht
     let T' := Trace.infinite T
     unfold TracesWTS at hT₁
     rw [Set.mem_iUnion] at hT₁
-    simp at hT₁
+    simp only [Set.mem_setOf_eq, Set.mem_iUnion] at hT₁
     obtain ⟨s, hs, hT₁⟩ := hT₁
     have hT' : T' ∈ Traces TSwts.TS := by
       unfold Traces TracesFromState
-      simp
+      simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop]
       use s, hs
       unfold TraceFromPathFragmentSet
-      simp
+      simp only [Set.mem_setOf_eq]
       unfold TracesFromInitialStateWTS at hT₁
-      simp at hT₁
+      simp only [Set.mem_setOf_eq] at hT₁
       obtain ⟨π, hπ, hT₁⟩ := hT₁
       use π, hπ
       unfold T' TraceFromPathFragment
       match π with
       | PathFragment.finite p =>
         unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
-        simp at hπ
+        simp only [Set.mem_setOf_eq] at hπ
         obtain ⟨hπ, _⟩ := hπ
         obtain ⟨_, hTS⟩ := TSwts
         specialize hTS (p.states (Fin.last p.n))
         contradiction
       | PathFragment.infinite p =>
-        simp
+        simp only [Trace.infinite.injEq]
         unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS at hT₁
-        simp at hT₁
+        simp only at hT₁
         assumption
 
     apply h at hT'
     unfold TracesFin TracesFinFromState
-    simp
+    simp only [Set.mem_setOf_eq, Set.mem_image]
     unfold Traces TracesFromState at hT'
     rw [Set.mem_iUnion] at hT'
-    simp at hT'
+    simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop] at hT'
     obtain ⟨s, hs, hT'⟩ := hT'
     use s, hs
 
     obtain ⟨π, hπ, hT'⟩ := hT'
     unfold PathsFinFromState
-    simp
+    simp only [Set.mem_setOf_eq]
     match π with
     | PathFragment.finite p =>
       unfold T' TraceFromPathFragment at hT'
-      simp at hT'
+      simp only [reduceCtorEq] at hT'
     | PathFragment.infinite p =>
       let πfin : FinitePathFragment TS := ⟨t.n, fun i => p.states i, by
         intro i
         have hv := p.valid i
-        simp
+        simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
         exact hv⟩
       use πfin
       unfold startStatePathFragment πfin
-      simp
+      simp only [Fin.val_zero]
       constructor
       · unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
-        simp at hπ
+        simp only [Set.mem_setOf_eq, true_and] at hπ
         assumption
       · unfold FiniteTraceFromFinitePathFragment
-        simp
+        simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast]
         unfold pref Prefix at hT₂
         rw [Set.mem_def] at hT₂
         obtain ⟨n, hT₂⟩ := hT₂
         unfold T' TraceFromPathFragment InfiniteTraceFromInfinitePathFragment at hT'
-        simp at hT'
+        simp only [Trace.infinite.injEq] at hT'
         rw [hT₂, hT']
   · intro h
     rw [Set.subset_def]
     intro t ht
     unfold Traces TracesFromState TraceFromPathFragmentSet PathsFromState at ht
-    simp at ht
+    simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop] at ht
     obtain ⟨s, hs, ht⟩ := ht
     obtain ⟨π, hπ, ht⟩ := ht
     obtain ⟨hπmax, hπstart⟩ := hπ
     unfold isMaximalPathFragment endStatePathFragment at hπmax
     cases π with
     | finite p =>
-      simp at hπmax
+      simp only at hπmax
       have hTS := TSwts.h
       unfold hasNoTerminalStates at hTS
       specialize hTS (p.states (Fin.last p.n))
       contradiction
     | infinite p =>
-      simp at hπmax
+      simp only at hπmax
       let T := InfiniteTraceFromInfinitePathFragment p
 
       have hpref : ∀ q ∈ (pref T), ↑q ∈ TracesFin TS := by
@@ -2761,22 +2762,22 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         apply h
         rw [finite_traces_are_prefixes]
         unfold prefLTProperty
-        simp
+        simp only [Set.mem_iUnion, exists_prop]
         use T
         constructor
         · unfold TracesWTS TracesFromInitialStateWTS
           rw [Set.mem_iUnion]
-          simp
+          simp only [Set.mem_setOf_eq, Set.mem_iUnion]
           use s, hs
           use (PathFragment.infinite p)
           unfold PathsFromState isMaximalPathFragment endStatePathFragment
-          simp
+          simp only [Set.mem_setOf_eq, true_and]
           use hπstart
           unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS
-          simp
+          simp only
           unfold T
           rfl
-        · simp [hq]
+        · simp only [hq]
 
       let finPath (m: ℕ) : FinitePathFragment TS := by
         have mpref : ∃ q ∈ (pref T), (↑q ∈ TracesFin TS) ∧ (q.n = m) := by
@@ -2791,14 +2792,14 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
           apply hpref at hq
           use hq
           unfold q Prefix
-          simp
+          simp only
 
         let hq := mpref.choose_spec
         let q := mpref.choose
         obtain ⟨hq₁, hq₂, hq₃⟩ := hq
 
         unfold TracesFin TracesFinFromState at hq₂
-        simp at hq₂
+        simp only [Set.mem_setOf_eq, Set.mem_image] at hq₂
         let hq₂' := hq₂.choose_spec
         obtain ⟨hq₂₁, hq₂₂⟩ := hq₂'
         let path := hq₂₂.choose
@@ -2813,7 +2814,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         | 0 => by
           have hm : ∃ m, ∀ k, ∃ j > k, (finPathState m 0) = (finPathState j 0) := by
             by_contra hc
-            simp at hc
+            simp only [gt_iff_lt, not_exists, not_forall, not_and] at hc
             obtain ⟨hfin, _, _⟩ := hfin
             let ⟨Selems, Scomplete⟩ := hfin
 
@@ -2848,7 +2849,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
               sorry,
             fun k => I,
             fun k => s₀,
-            by simp,
+            by simp only [subset_refl, implies_true],
             by
               sorry,
             by
@@ -2858,13 +2859,13 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
       let π : InfinitePathFragment TS := ⟨fun i => (proofStructure i).Sseq i, by
           intro i
           unfold proofStructure
-          simp
+          simp only [Nat.reduceAdd, eq_mp_eq_cast, Fin.natCast_eq_last, Nat.cast_add, Nat.cast_one]
 
 
           sorry⟩
 
       unfold Traces TracesFromState TraceFromPathFragmentSet
-      simp
+      simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop]
       use (π.states 0)
 
       sorry
@@ -2886,7 +2887,7 @@ theorem intersection_safety_liveness {AP: Type} (P: LTProperty AP) : isSafetyPro
   rw [← hsafe]
   unfold closureLTProperty
   rw [hlive]
-  simp
+  simp only [exists_eq, Set.setOf_true, Set.subset_univ]
 
 /-!
 Any LT property can be decomposed into a safety and a liveness property.
@@ -2929,7 +2930,7 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
       obtain ⟨hσ₁, hσ₂⟩ := hσ
       rw [h₁]
       rw [Set.mem_inter_iff]
-      simp [hσ₁]
+      simp only [hσ₁, true_and]
       rw [Set.mem_union] at hσ₂
       cases hσ₂ with
       | inl hl => assumption
@@ -2947,7 +2948,7 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
       unfold Plive
       rw [closure_distributes_over_union]
       rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
-      simp
+      simp only [exists_eq, Set.setOf_true, Set.mem_union, Set.mem_univ, implies_true, forall_const, true_and]
       intro σ
       if hσ: σ ∈ closureLTProperty P then
         left
@@ -2956,14 +2957,14 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
         right
         apply closure_contains_property
         rw [Set.mem_diff]
-        simp
+        simp only [Set.mem_univ, true_and]
         assumption
 
     unfold closureLTProperty at hcl
     rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def] at hcl
-    simp at hcl
+    simp only [Set.mem_setOf_eq, exists_eq, Set.setOf_true, Set.mem_univ, implies_true, forall_const,  true_and] at hcl
     rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
-    simp
+    simp only [exists_eq, Set.setOf_true, Set.mem_univ, implies_true, forall_const, true_and]
     intro ω
 
     let σ : World AP := fun i => if i < ω.n + 1 then ω.f i else ω.f (ω.n - 1)
@@ -2974,10 +2975,10 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
     use ω.n
     unfold Prefix
     obtain ⟨n, f⟩ := ω
-    simp
+    simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
     funext i
     unfold σ
-    simp
+    simp only [Fin.is_lt, ↓reduceIte, Fin.cast_val_eq_self]
 
   use closureLTProperty P, Plive, hsafe, hlive
 
@@ -3002,7 +3003,7 @@ theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive 
       rw [Set.mem_def]
       use n)
     rw [Set.mem_iUnion] at hσ
-    simp at hσ
+    simp only [Set.mem_iUnion, exists_prop] at hσ
     obtain ⟨σ', hσ', hσ⟩ := hσ
     rw [h] at hσ'
     rw [Set.mem_inter_iff] at hσ'
@@ -3014,11 +3015,11 @@ theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive 
     obtain ⟨n', hσ⟩ := hσ
     rw [hσ]
     unfold Prefix
-    simp
+    simp only [AbstractFiniteWorld.mk.injEq]
     unfold Prefix at hσ
-    simp at hσ
+    simp only [AbstractFiniteWorld.mk.injEq] at hσ
     obtain ⟨hσ₁, hσ₂⟩ := hσ
-    simp [hσ₁]
+    simp only [hσ₁, true_and]
     rw [hσ₁]
     assumption
   · unfold isLivenessProperty at hlive
@@ -3030,13 +3031,13 @@ theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive 
     else
       right
       rw [Set.mem_diff]
-      simp
+      simp only [exists_eq, Set.setOf_true, Set.mem_univ, true_and]
       unfold closureLTProperty prefLTProperty
       rw [Set.mem_def, Set.setOf_app_iff, Set.subset_def]
-      simp
+      simp only [Set.mem_iUnion, exists_prop, not_forall, Classical.not_imp, not_exists, not_and]
       rw [h, Set.mem_inter_iff] at hp
-      simp at hp
-      simp [hσ] at hp
+      simp only [not_and] at hp
+      simp only [hσ, not_true_eq_false, imp_false] at hp
       unfold isSafetyProperty at hsafe
       specialize hsafe σ hp
       obtain ⟨n, hsafe⟩ := hsafe
@@ -3048,17 +3049,17 @@ theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive 
       · intro σ' hσ'
         unfold pref Prefix
         rw [Set.mem_def]
-        simp
+        simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq]
         rw [funext_iff]
         by_contra hc
         specialize hsafe σ'
 
         have h' : Prefix σ' n = Prefix σ n := by
           unfold Prefix
-          simp
+          simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
           funext i
           specialize hc i
-          simp [hc]
+          simp only [hc]
 
         apply hsafe at h'
         rw [h, Set.mem_inter_iff] at hσ'
