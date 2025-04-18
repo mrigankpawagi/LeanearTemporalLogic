@@ -124,7 +124,7 @@ Implements transition systems and related concepts for modeling state-based syst
   - `Traces`: Sets of all traces starting from initial states
   - `TracesFin`: Sets of all finite traces starting from initial states
 
-- `TransitionSystemWithoutTerminalStates` (abbreviated as `TransitionSystemWTS`): A transition system guaranteed to have no terminal states
+- `TransitionSystemWithoutTerminalStates` (abbreviated as `TransitionSystemWTS`): A transition system guaranteed to have no terminal states. The underlying `TransitionSystem` structure can be accessed like `TSwts.TS`, although all its fields can be directly accessed like `TSwts.S` or `TSwts.I`.
   - `TraceFromPathWTS`: Convert a (infinite) path fragment to a (infinte) trace
   - `TraceFromPathFromStateWTS`: Convert a (infinite) path fragment starting from a given state to a (infinite) trace
   - `TraceFromPathFromInitialStateWTS`: Convert a (infinite) path fragment starting from an initial state to a (infinite) trace
