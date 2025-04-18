@@ -272,6 +272,6 @@ Implements transition systems and related concepts for modeling state-based syst
 
 ### Quality goals
 
-- Replace `simp` tactics with `simp only` except when closing the goal
+- Replace `simp` tactics with `simp only` except when closing the goal (current status: 8.69%)
 - Replace structures with special properties by inherited structures (e.g., `TransitionSystemWTS`)
 - Create type classes for overloaded operations like `Post`, `Pre`, `pref`, etc.
