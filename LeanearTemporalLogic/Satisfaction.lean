@@ -1,3 +1,10 @@
+/-
+# Satisfaction in Linear Temporal Logic
+
+This module provides the formalization of the satisfaction relation between different objects in the context of Linear Temporal Logic (LTL) and Linear Time Properties (LT properties). Satisfaction also forms the basis for the notion of equivalence.
+
+This module provides several results related to satisfaction and equivalence of these objects, including using them as the basis for characterizing certain kinds of objects.
+-/
 import Mathlib
 import LeanearTemporalLogic.AbstractWorlds
 import LeanearTemporalLogic.LTL
@@ -5,8 +12,11 @@ import LeanearTemporalLogic.TransitionSystems
 import LeanearTemporalLogic.LTProperty
 
 /-!
-We will define a satisfaction relation as a type class. This will allow us to define satisfaction for different types of models.
+## Satisfaction and Equivalence Type Classes
+
+These type classes provide a generic framework for defining satisfaction and equivalence relations for various models and formulae.
 -/
+/-- The `Satisfaction` type class defines a satisfaction relation between models and formulae. -/
 class Satisfaction (α : Type u) (β : Type v) where
   Satisfies : α → β → Prop
 
@@ -18,13 +28,18 @@ class Equivalent (α : Type) where
 infixl:70 (priority := high) " ≡ " => Equivalent.Equiv
 
 /-!
-A world is a sequence of states where each state is set of atomic propositions (that are considered true in that state).
+## Worlds and Traces
+
+A world is an infinite sequence of states, each being a set of atomic propositions. Prefixes and suffixes of worlds are used to define temporal operators.
 -/
+/-- A `World` is an infinite sequence of sets of atomic propositions. -/
 abbrev World := AbstractWorld
+/-- A `FiniteWorld` is a finite sequence of sets of atomic propositions. -/
 abbrev FiniteWorld := AbstractFiniteWorld
 
-/-!
-A suffix of a world w starting at index i is a world w' such that w'(j) = w(i+j) for all j. We will denote this by w[i...].
+/--
+A suffix of a world `w` starting at index `i` is a world `w'` such that `w'(j) = w(i+j)` for all `j`.
+Denoted as `w[i…]`.
 -/
 def Suffix {AP: Type} (σ : World AP) (i : ℕ) : World AP := fun j => σ (i + j)
 
@@ -32,34 +47,48 @@ syntax:60 term "[" term "…]" : term
 macro_rules
   | `($σ[$i…]) => `(Suffix $σ $i)
 
-/-!
-A simple lemma for composition of suffixes.
+/--
+Composition of suffixes: taking a suffix of a suffix is the same as taking a single suffix at the sum of the indices.
 -/
 theorem Suffix.composition {AP: Type} (σ : World AP) (i j : ℕ) : σ[i…][j…] = σ[i+j…] := by
   funext k
   unfold Suffix
   rw [Nat.add_assoc]
 
+/--
+The suffix at index 0 is the world itself.
+-/
 theorem Suffix.zero_identity {AP: Type} (σ : World AP) : σ[0…] = σ := by
   funext k
   unfold Suffix
   rw [Nat.zero_add]
 
-/-!
-We will also need prefixes of worlds. Note that prefixes are finite.
+/--
+A prefix of a world is its initial segment of finite length `n`.
 -/
 def Prefix {AP: Type} (σ : World AP) (n: ℕ) : FiniteWorld AP := ⟨n, fun i => σ i⟩
 
+/--
+A prefix of a prefix, of length `m ≤ ω.n`.
+-/
 def PrefixOfPrefix {AP: Type} (ω : FiniteWorld AP) (m : ℕ) (h: m ≤ ω.n) : FiniteWorld AP := ⟨m, fun i => ω.f (Fin.castLE (by simp only [add_le_add_iff_right, h]) i)⟩
 
+/--
+The set of all prefixes of a world.
+-/
 def pref {AP: Type} (σ: World AP) : Set (FiniteWorld AP) := fun ω => ∃ (n: ℕ), ω = Prefix σ n
 
 /-!
-Now we define what it means for a world to satisfy an LTL formula.
+## Satisfaction of LTL Formulae
+
+Defines the recursive satisfaction relation for LTL formulae by worlds, and provides instances for worlds and states.
 -/
 section
 open LTLFormula
 
+/--
+Satisfaction of LTL formulae by worlds.
+-/
 def world_satisfies_ltl {AP: Type} (σ : World AP) : LTLFormula AP → Prop
   | ⊤ => true
   | LTLFormula.atom a => a ∈ σ 0
@@ -70,20 +99,28 @@ def world_satisfies_ltl {AP: Type} (σ : World AP) : LTLFormula AP → Prop
 
 instance {AP: Type} : Satisfaction (World AP) (LTLFormula AP) := ⟨world_satisfies_ltl⟩
 
-/-!
-We will also define satisfaction of an LTL formula by a single state, which is the same as satisfaction by a world with that state as the first state and all other states empty.
+/--
+Satisfaction of an LTL formula by a set of atomic propositions is defined as the satisfaction of the formula by a world that starts with that set and subsequently has empty sets.
 -/
 instance {AP: Type} : Satisfaction (Set AP) (LTLFormula AP) := ⟨fun A ϕ => by
   let f : World AP := fun n => if n = 0 then A else ∅
   exact f ⊨ ϕ⟩
 
 /-!
-We will also define some useful lemmas for satisfaction.
+## Useful Lemmas for Satisfaction
+
+These lemmas provide convenient equivalences for satisfaction of various logical and temporal operators.
+-/
+/--
+Satisfaction of negation: `(σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ))`.
 -/
 def world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
   simp only [Satisfaction.Satisfies, not_def]
   rw [world_satisfies_ltl]
 
+/--
+Satisfaction of disjunction: `(σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂))`.
+-/
 def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
   simp only [Satisfaction.Satisfies, or_def, not_def, and_def]
   repeat rw [world_satisfies_ltl]
@@ -100,20 +137,34 @@ def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) 
     simp only [not_or]
     assumption
 
+/--
+Satisfaction of next: `(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)`.
+-/
 def world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
   simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
+/--
+Satisfaction of conjunction: `(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))`.
+-/
 def world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
   simp only [Satisfaction.Satisfies, and_def]
   repeat rw [world_satisfies_ltl]
 
+/--
+Satisfaction of until: `(σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁)))`.
+-/
 def world_satisfies_until {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
   simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
 /-!
-We will now show satisfaction for ♢ and □ operators.
+## Eventually and Always
+
+Lemmas for satisfaction of the derived temporal operators "eventually" and "always", and their compositions.
+-/
+/--
+Satisfaction of eventually: `(σ ⊨ (♢ ϕ)) ↔ ∃ (i: ℕ), ((σ[i…]) ⊨ ϕ)`.
 -/
 theorem world_satisfies_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ ϕ)) ↔ ∃ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
   unfold eventually
@@ -137,6 +188,9 @@ theorem world_satisfies_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula A
       intro hk
       rw [world_satisfies_ltl]
 
+/--
+Satisfaction of always: `(σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ)`.
+-/
 theorem world_satisfies_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
   unfold always
 
@@ -171,6 +225,9 @@ theorem world_satisfies_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) :
     simp only [Satisfaction.Satisfies] at h
     apply h
 
+/--
+Satisfaction of always eventually: `(σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ)`.
+-/
 theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
   constructor
 
@@ -195,6 +252,9 @@ theorem world_satisfies_always_eventually {AP: Type} (σ : World AP) (ϕ : LTLFo
     rw [Suffix.composition]
     assumption
 
+/--
+Satisfaction of eventually always: `(σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ)`.
+-/
 theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (♢ □ ϕ)) ↔ ∃ (i: ℕ), ∀ (j: ℕ), ((σ[i+j…]) ⊨ ϕ) := by
   constructor
 
@@ -220,10 +280,16 @@ theorem world_satisfies_eventually_always {AP: Type} (σ : World AP) (ϕ : LTLFo
     rw [Suffix.composition]
     assumption
 
+/--
+Satisfaction of weak until: `(σ ⊨ (ϕ₁ 𝓦 ϕ₂)) ↔ ((σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ∨ (σ ⊨ (□ ϕ₁)))`.
+-/
 theorem world_satisfies_weakuntil {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓦 ϕ₂)) ↔ ((σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ∨ (σ ⊨ (□ ϕ₁))) := by
   rw [weakuntil]
   rw [world_satisfies_or]
 
+/--
+If a world satisfies an LTL formula, it satisfies it for the first time at some index.
+-/
 theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (σ : World AP) (h: ∃ (x : ℕ), Suffix σ x ⊨ ϕ) : ∃ x, (Suffix σ x ⊨ ϕ) ∧ (∀ y < x, ¬ (Suffix σ y ⊨ ϕ)) := by
   by_contra hc
   simp only [And.and, not_exists, not_and, not_forall, Classical.not_imp] at hc
@@ -262,26 +328,36 @@ theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (
   contradiction
 
 /-!
-We now define the set of worlds that satisfy a given LTL formula.
+## Worlds Satisfying an LTL Formula
+
+The set of all worlds that satisfy a given LTL formula.
 -/
 def Worlds {AP: Type} (ϕ : LTLFormula AP) : Set (World AP) := fun σ => σ ⊨ ϕ
 
 /-!
-We will now define the notion of equivalence of LTL formulae.
+## Equivalence of LTL Formulae
+
+Two LTL formulae are equivalent if their worlds coincide.
 -/
 instance {AP: Type} : Equivalent (LTLFormula AP) := ⟨fun ϕ ψ => Worlds ϕ = Worlds ψ⟩
 
-/-!
-It will be useful to show that this is an equivalence relation.
+/--
+Equivalence is reflexive.
 -/
 theorem equivalent_ltl_refl {AP: Type} (ϕ : LTLFormula AP) : ϕ ≡ ϕ := by
   simp only [Equivalent.Equiv]
 
+/--
+Equivalence is symmetric.
+-/
 theorem equivalent_ltl_symm {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ ϕ) := by
   simp only [Equivalent.Equiv]
   intro h
   rw [h]
 
+/--
+Equivalence is transitive.
+-/
 theorem equivalent_ltl_trans {AP: Type} (ϕ ψ χ : LTLFormula AP) : (ϕ ≡ ψ) → (ψ ≡ χ) → (ϕ ≡ χ) := by
   simp only [Equivalent.Equiv]
   intro h₁ h₂
@@ -289,7 +365,12 @@ theorem equivalent_ltl_trans {AP: Type} (ϕ ψ χ : LTLFormula AP) : (ϕ ≡ ψ)
   exact h₂
 
 /-!
-It would also be useful to show that equivalence is preserved by certain operations.
+## Lemmas for Equivalence of LTL Forumulae
+
+This includes preservation, duality, idependence, expansion, absorption, distribution, and other properties of equivalence.
+-/
+/--
+Equivalence is preserved by negation.
 -/
 theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ)) := by
   simp only [Equivalent.Equiv, not_def]
@@ -326,6 +407,9 @@ theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (
       rw [← h₁]
       assumption
 
+/--
+Equivalence is preserved by always.
+-/
 theorem equivalent_ltl_preserves_always {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) → ((□ ϕ) ≡ (□ ψ)) := by
   simp only [Equivalent.Equiv]
   intro h
@@ -349,10 +433,9 @@ theorem equivalent_ltl_preserves_always {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ
     rw [h₁]
     assumption
 
-/-!
-Now we prove some equivalence rules for LTL formulae.
+/--
+Double negation: `(¬ (¬ ϕ)) ≡ ϕ`.
 -/
-
 theorem ltl_double_negation {AP: Type} (ϕ : LTLFormula AP) : (¬ (¬ ϕ)) ≡ ϕ := by
   simp only [Equivalent.Equiv, not_def]
   funext σ
@@ -370,6 +453,9 @@ theorem ltl_double_negation {AP: Type} (ϕ : LTLFormula AP) : (¬ (¬ ϕ)) ≡ �
     simp only [Not.not, not_not]
     assumption
 
+/--
+Duality for next: `(¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))`.
+-/
 theorem ltl_duality_next {AP: Type} (ϕ : LTLFormula AP) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) := by
   simp only [Equivalent.Equiv, not_def]
   funext σ
@@ -392,6 +478,9 @@ theorem ltl_duality_next {AP: Type} (ϕ : LTLFormula AP) : ((¬ (◯ ϕ)) ≡ (�
     rw [world_satisfies_ltl, world_satisfies_ltl]
     assumption
 
+/--
+Duality for eventually: `(¬ (♢ ϕ)) ≡ (□ (¬ ϕ))`.
+-/
 theorem ltl_duality_eventually {AP: Type} (ϕ : LTLFormula AP) : ((¬ (♢ ϕ)) ≡ (□ (¬ ϕ))) := by
   simp only [Equivalent.Equiv, not_def]
   funext σ
@@ -432,6 +521,9 @@ theorem ltl_duality_eventually {AP: Type} (ϕ : LTLFormula AP) : ((¬ (♢ ϕ)) 
     simp only [Satisfaction.Satisfies] at h₁
     apply h₁
 
+/--
+Duality for always: `(¬ (□ ϕ)) ≡ (♢ (¬ ϕ))`.
+-/
 theorem ltl_duality_always {AP: Type} (ϕ : LTLFormula AP) : ((¬ (□ ϕ)) ≡ (♢ (¬ ϕ))) := by
   have h₀ : (¬ (♢ (¬ ϕ))) ≡ (□ (¬ (¬ ϕ))) := ltl_duality_eventually (¬ ϕ)
   have h₁ : (¬ (¬ ϕ)) ≡ ϕ := ltl_double_negation ϕ
@@ -444,6 +536,9 @@ theorem ltl_duality_always {AP: Type} (ϕ : LTLFormula AP) : ((¬ (□ ϕ)) ≡ 
   have h₆ : (¬ (□ ϕ)) ≡ (♢ (¬ ϕ)) := equivalent_ltl_trans _ _ _ h₄ h₅
   assumption
 
+/--
+Duality for until: `(¬ (ϕ 𝓤 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓦 ((¬ ϕ) ∧ (¬ ψ)))`.
+-/
 theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓦 ((¬ ϕ) ∧ (¬ ψ))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -601,6 +696,9 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       simp only [Not.not] at hrr
       contradiction
 
+/--
+Duality for weak until: `(¬ (ϕ 𝓦 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ)))`.
+-/
 theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 ψ)) ≡ ((ϕ ∧ (¬ ψ)) 𝓤 ((¬ ϕ) ∧ (¬ ψ))) := by
   rw [equivalent_ltl_preserves_negation]
   have h₁ : (¬ (¬ (ϕ 𝓦 ψ))) ≡ (ϕ 𝓦 ψ) := ltl_double_negation (ϕ 𝓦 ψ)
@@ -713,6 +811,9 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
     apply equivalent_ltl_trans _ _ _ h₄ h₃
   apply equivalent_ltl_trans _ _ _ h₁ h₂
 
+/--
+Idempotence of eventually: `(♢ (♢ ϕ)) ≡ (♢ ϕ)`.
+-/
 theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ ϕ)) ≡ (♢ ϕ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -735,6 +836,9 @@ theorem ltl_idempotence_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ (♢ �
     ring_nf
     assumption
 
+/--
+Idempotence of always: `(□ (□ ϕ)) ≡ (□ ϕ)`.
+-/
 theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) ≡ (□ ϕ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -756,6 +860,9 @@ theorem ltl_idempotence_always {AP: Type} (ϕ : LTLFormula AP) : (□ (□ ϕ)) 
     specialize h (i + j)
     assumption
 
+/--
+Idempotence of until from the left: `((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ)`.
+-/
 theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ 𝓤 ϕ) 𝓤 ψ) ≡ (ϕ 𝓤 ψ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -808,6 +915,9 @@ theorem ltl_idempotence_until_left {AP: Type} (ϕ ψ : LTLFormula AP) : ((ϕ �
         intro hk'
         simp only [not_lt_zero'] at hk'
 
+/--
+Idempotence of until from the right: `(ϕ 𝓤 (ψ 𝓤 ψ)) ≡ (ϕ 𝓤 ψ)`.
+-/
 theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 (ψ 𝓤 ψ)) ≡ (ϕ 𝓤 ψ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -857,6 +967,9 @@ theorem ltl_idempotence_until_right {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ �
         simp only [not_lt_zero'] at hk
     · assumption
 
+/--
+Absorption of eventually by always eventually: `(♢ □ ♢ ϕ) ≡ (□ ♢ ϕ)`.
+-/
 theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ □ ♢ ϕ) ≡ (□ ♢ ϕ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -880,6 +993,9 @@ theorem ltl_absorption_always_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ 
     rw [Suffix.zero_identity]
     assumption
 
+/--
+Absorption of always by eventually always: `(□ ♢ □ ϕ) ≡ (♢ □ ϕ)`.
+-/
 theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ ♢ □ ϕ) ≡ (♢ □ ϕ) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -903,6 +1019,9 @@ theorem ltl_absorption_eventually_always {AP: Type} (ϕ : LTLFormula AP) : (□ 
     rw [← Nat.add_assoc, Nat.add_comm i' i] at hi
     assumption
 
+/--
+Expansion for until: `(ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ))))`.
+-/
 theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓤 ψ)))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -982,6 +1101,9 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
             rw [Nat.add_comm]
             assumption
 
+/--
+Expansion for weak until: `(ϕ 𝓦 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓦 ψ))))`.
+-/
 theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ) ≡ (ψ ∨ (ϕ ∧ (◯ (ϕ 𝓦 ψ)))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1061,6 +1183,9 @@ theorem ltl_expansion_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓦 ψ
           rw [Nat.add_comm] at h
           assumption
 
+/--
+Expansion for eventually: `(♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ)))`.
+-/
 theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ (ϕ ∨ (◯ (♢ ϕ))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1101,6 +1226,9 @@ theorem ltl_expansion_eventually {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) ≡ 
       rw [Suffix.composition, Nat.add_comm] at hj
       assumption
 
+/--
+Expansion for always: `(□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ)))`.
+-/
 theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ ∧ (◯ (□ ϕ))) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1131,6 +1259,9 @@ theorem ltl_expansion_always {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) ≡ (ϕ 
       rw [Suffix.composition, Nat.add_comm] at hr
       assumption
 
+/--
+Distributivity of next over until: `(◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ))`.
+-/
 theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (ϕ 𝓤 ψ)) ≡ ((◯ ϕ) 𝓤 (◯ ψ)) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1176,6 +1307,9 @@ theorem ltl_distributive_next_until {AP: Type} (ϕ ψ : LTLFormula AP) : (◯ (�
       rw [Nat.add_comm]
       assumption
 
+/--
+Distributivity of or over eventually: `(♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ))`.
+-/
 theorem ltl_distributive_eventually_or {AP: Type} (ϕ ψ : LTLFormula AP) : (♢ (ϕ ∨ ψ)) ≡ ((♢ ϕ) ∨ (♢ ψ)) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1212,6 +1346,9 @@ theorem ltl_distributive_eventually_or {AP: Type} (ϕ ψ : LTLFormula AP) : (♢
       right
       assumption
 
+/--
+Distributivity of and over always: `(□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ))`.
+-/
 theorem ltl_distributive_always_and {AP: Type} (ϕ ψ : LTLFormula AP) : (□ (ϕ ∧ ψ)) ≡ ((□ ϕ) ∧ (□ ψ)) := by
   simp only [Equivalent.Equiv]
   funext σ
@@ -1246,13 +1383,23 @@ theorem ltl_distributive_always_and {AP: Type} (ϕ ψ : LTLFormula AP) : (□ (�
 
 
 /-!
-Now we prove the lemmas that "Until is the Least Solution of the Expansion Law" and
-"Weak Until is the Greatest Solution of the Expansion Law".
+## Expansion Law Solutions
+
+Characterization of until and weak until as least and greatest solutions of the expansion law respectively.
+-/
+/--
+A solution of the expansion law from below is one that contains all the worlds that it would contain  if it were to be the exact solution.
 -/
 def solution_of_expansion_law_lower {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P}) ⊆ P
 
+/--
+A solution of the expansion law from above is one that contains only the worlds that it would contain if it were to be the exact solution.
+-/
 def solution_of_expansion_law_upper {AP: Type} (ϕ ψ : LTLFormula AP) (P : Set (World AP)) : Prop := P ⊆ (Worlds ψ ∪ {σ ∈ Worlds ϕ | σ[1…] ∈ P})
 
+/--
+Until is the least solution of the expansion law.
+-/
 theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_lower ϕ ψ (Worlds (ϕ 𝓤 ψ))) ∧ (∀ P, (solution_of_expansion_law_lower ϕ ψ P) → Worlds (ϕ 𝓤 ψ) ⊆ P) := by
   unfold solution_of_expansion_law_lower
   unfold Worlds
@@ -1357,7 +1504,9 @@ theorem until_least_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP)
     rw [Suffix.zero_identity] at h₀
     assumption
 
-
+/--
+Weak until is the greatest solution of the expansion law.
+-/
 theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLFormula AP) : (solution_of_expansion_law_upper ϕ ψ (Worlds (ϕ 𝓦 ψ))) ∧ (∀ P, (solution_of_expansion_law_upper ϕ ψ P) → P ⊆ Worlds (ϕ 𝓦 ψ)) := by
   unfold solution_of_expansion_law_upper Worlds
   simp only [And.and]
@@ -1467,18 +1616,23 @@ theorem weakuntil_greatest_solution_of_expansion_law {AP: Type} (ϕ ψ : LTLForm
       assumption
 
 /-!
-We will now use the satisfaction of LTL formulae to define satisfaction of PL formulae.
+## Satisfaction of PL Formulae
+
+Defines satisfaction of propositional logic formulae by sets of atomic propositions.
 -/
 instance {AP: Type} : Satisfaction (Set AP) (PLFormula AP) := ⟨fun A Φ ↦ A ⊨ Φ.toLTLFormula⟩
 
-/-!
-We will also define some useful lemmas for satisfaction of PL formulae.
+/--
+Satisfaction of negation for PL formulae.
 -/
 def set_satisfies_negation {AP: Type} (σ : Set AP) (ϕ : PLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
   simp only [Satisfaction.Satisfies]
   rw [PLFormula.toLTLFormula_not]
   simp only [world_satisfies_ltl]
 
+/--
+Satisfaction of disjunction for PL formulae.
+-/
 def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
   simp only [Satisfaction.Satisfies]
   rw [PLFormula.toLTLFormula_or]
@@ -1497,6 +1651,9 @@ def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ
     simp only [not_or]
     assumption
 
+/--
+Satisfaction of conjunction for PL formulae.
+-/
 def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
   simp only [Satisfaction.Satisfies]
   rw [PLFormula.toLTLFormula_and]
@@ -1506,25 +1663,36 @@ end section
 
 section
 open TransitionSystem
+
 /-!
-We will define a satisfaction relation between transition systems and LT properties. For this, both must be defined over the same set of atomic propositions. Note that we specifically deal with Transition Systems without terminal states.
+## Satisfaction of LT Properties by Transition Systems
+-/
+/--
+Satisfaction of LT properties by transition systems without terminal states. For this, both the transition system and the property must be defined over the same set of atomic propositions.
+
+The motivation for restricting to transition systems without terminal states is that this guarantees infinite traces that can act as worlds for the LT property. Infinite traces are easier to work with in many practical applications.
 -/
 instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (LTProperty AP) := ⟨fun TSwts P ↦ TracesWTS TSwts ⊆ P⟩
 
+/--
+Satisfaction of LT properties by states of transition systems without terminal states.
+-/
 instance {AP: Type} {TSwts: TransitionSystemWTS AP} : Satisfaction (TSwts.S) (LTProperty AP) := ⟨fun s P ↦ TracesFromStateWTS s ⊆ P⟩
 
-/-!
-Some definitions to reconcile traces and LT properties.
+/--
+Membership of an infinite trace in an LT property.
 -/
 instance {AP: Type} : Membership (InfiniteTrace AP) (LTProperty AP) := ⟨fun P π ↦ by
   rw [LTProperty] at P
-  rw [InfiniteTrace] at π
   exact π ∈ P⟩
 
+/--
+Satisfaction of a set of worlds by a transition system without terminal states.
+-/
 instance {AP: Type} : Satisfaction (TransitionSystemWTS AP) (Set (World AP)) := ⟨fun TSwts P ↦ TracesWTS TSwts ⊆ P⟩
 
-/-!
-Some auxiliary lemmas about satisfaction of LT properties.
+/--
+A transition system satisfies an LT property iff the traces of all its paths are in the property.
 -/
 theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) : TSwts ⊨ P ↔ ∀ π, (h: π ∈ Paths TSwts.TS) → TraceFromPathWTS π h ∈ P := by
   simp only [Satisfaction.Satisfies]
@@ -1576,9 +1744,13 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
     rw [← hπ''] at h₀
     assumption
 
-
 /-!
-We now prove a theorem about **Trace Inclusion and LT Properties**.
+## Trace Inclusion and LT Properties
+
+Relates trace inclusion between systems to satisfaction of LT properties.
+-/
+/--
+Trace inclusion between systems is equivalent to preservation of satisfaction for all LT properties.
 -/
 theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : (TracesWTS TSwts₁ ⊆ TracesWTS TSwts₂) ↔ ∀ (P: LTProperty AP), TSwts₂ ⊨ P → TSwts₁ ⊨ P := by
   simp only [Satisfaction.Satisfies]
@@ -1600,14 +1772,19 @@ theorem trace_inclusion_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transiti
     simp only [subset_refl, forall_const] at h
     assumption
 
-
-/-!
-We will define the notion of trace equivalence between two transition systems, and then show a corollary of the previous theorem about **Trace Equivalence and LT Properties**.
+/--
+Trace equivalence between systems is the equivalence of the sets of their traces.
 -/
 def trace_equivalence {AP: Type} (TS₁ TS₂: TransitionSystem AP) : Prop := Traces TS₁ = Traces TS₂
 
+/--
+Trace equivalence for transition systems without terminal states.
+-/
 def trace_equivalence_wts {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : Prop := TracesWTS TSwts₁ = TracesWTS TSwts₂
 
+/--
+Two systems are trace equivalent iff they satisfy the same LT properties.
+-/
 theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: TransitionSystemWTS AP) : (trace_equivalence_wts TSwts₁ TSwts₂) ↔ ∀ (P: LTProperty AP), TSwts₁ ⊨ P ↔ TSwts₂ ⊨ P := by
   rw [trace_equivalence_wts]
   constructor
@@ -1636,11 +1813,19 @@ theorem trace_equivalence_and_LTProperties {AP: Type} (TSwts₁ TSwts₂: Transi
       apply h₂
 
 /-!
-We will now define some special kinds of LT properties, starting with **Invariants**.
+## Invariants
+
+An LT property is an invariant with condition `ϕ` if it is the set of worlds where every state satisfies `ϕ`.
 -/
 def isInvariantWithCondition {AP: Type} (P: LTProperty AP) (ϕ: PLFormula AP) : Prop := P = {σ | ∀ (n: ℕ), σ n ⊨ ϕ}
+/--
+An LT property is an invariant if it is an invariant with some condition.
+-/
 def isInvariant {AP: Type} (P: LTProperty AP) : Prop := ∃ (ϕ : PLFormula AP), isInvariantWithCondition P ϕ
 
+/--
+A system satisfies an invariant property iff all reachable states satisfy the invariant condition.
+-/
 theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isInvariant P) : TSwts ⊨ P ↔ (∃ (ϕ : PLFormula AP), (isInvariantWithCondition P ϕ) ∧ (∀ s ∈ Reach TSwts.TS, TSwts.L s ⊨ ϕ)) := by
   rw [ltproperty_satisfaction_allPaths]
   rw [isInvariant] at h
@@ -1808,24 +1993,41 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       specialize hΦr (p.states n) hreach
       assumption
 
+/-!
+## Safety Properties
 
+A property is a safety property if every violation can be detected by a finite prefix.
+-/
 def isSafetyProperty {AP: Type} (P: LTProperty AP) : Prop := ∀ (σ: World AP), σ ∉ P → ∃ n, ∀ σ', (Prefix σ' n = Prefix σ n) → σ' ∉ P
 
+/--
+A finite world is a bad prefix for a safety property if all its extensions violate the property.
+-/
 def isBadPrefix {AP: Type} (P: LTProperty AP) (ω: FiniteWorld AP) : Prop := isSafetyProperty P ∧ ∀ σ, (Prefix σ (ω.n) = ω) → σ ∉ P
 
+/--
+A minimal bad prefix is a bad prefix with no shorter bad prefix.
+-/
 def isMinimalBadPrefix {AP: Type} (P: LTProperty AP) (ω: FiniteWorld AP) : Prop := isBadPrefix P ω ∧ ∀ (m: ℕ) (h: m < ω.n), ¬ (isBadPrefix P (PrefixOfPrefix ω m (by
   rw [Nat.le_iff_lt_or_eq]
   left
   assumption
 )))
 
-/-! Set of all bad prefixes -/
+/--
+The set of all bad prefixes for a property.
+-/
 def BadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isBadPrefix P ω}
 
-/-! Set of all minimal bad prefixes -/
+/--
+The set of all minimal bad prefixes for a property.
+-/
 def MinBadPref {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := { ω | isMinimalBadPrefix P ω}
 
-theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ↑ω ∉ TracesFin TSwts.TS := by
+/--
+A system satisfies a safety property iff no bad prefix is a finite trace of the system.
+-/
+theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTProperty AP) (h: isSafetyProperty P) : TSwts ⊨ P ↔ ∀ ω ∈ BadPref P, ω ∉ TracesFin TSwts.TS := by
   have hTS := TSwts.h
   unfold hasNoTerminalStates at hTS
   constructor
@@ -2007,10 +2209,18 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       apply h₀'
 
 /-!
-We will define prefixes and closures for LT properties to provide an alternative characterization of safety properties.
+## Prefixes and Closures
+
+Defines the prefix and closure operators for LT properties and proves some of their properties.
+-/
+/--
+The set of all prefixes of traces in an LT property.
 -/
 def prefLTProperty {AP: Type} (P: LTProperty AP) : Set (FiniteWorld AP) := ⋃ σ ∈ P, pref σ
 
+/--
+The closure of an LT property is the set of worlds whose prefixes are all prefixes of some world in the property.
+-/
 def closureLTProperty {AP: Type} (P: LTProperty AP) : Set (World AP) := {σ | pref σ ⊆ prefLTProperty P}
 
 instance {AP: Type} : HasSubset (LTProperty AP) := ⟨fun P Q ↦ ∀ σ, σ ∈ P → σ ∈ Q⟩
@@ -2021,6 +2231,9 @@ instance {AP: Type} : Inter (LTProperty AP) := ⟨fun P Q ↦ {σ | (σ ∈ P) �
 
 instance {AP: Type} : SDiff (LTProperty AP) := ⟨fun P Q ↦ {σ | (σ ∈ P) ∧ (σ ∉ Q)}⟩
 
+/--
+Every property is contained in its closure.
+-/
 theorem closure_contains_property {AP: Type} (P: LTProperty AP) : P ⊆ (closureLTProperty P) := by
   rw [Set.subset_def]
   intro σ hσ
@@ -2033,6 +2246,9 @@ theorem closure_contains_property {AP: Type} (P: LTProperty AP) : P ⊆ (closure
   simp only [Set.mem_iUnion, exists_prop]
   exact ⟨hσ, hω⟩
 
+/--
+A property is a safety property iff it equals its closure.
+-/
 theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ closureLTProperty P = P := by
   constructor
   · intro h₁
@@ -2096,6 +2312,9 @@ theorem safety_closure {AP: Type} (P: LTProperty AP) : isSafetyProperty P ↔ cl
     rw [← hσ'] at hp
     contradiction
 
+/--
+The closure of the traces of a system is a safety property that the system satisfies.
+-/
 theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyProperty (closureLTProperty (TracesWTS TSwts)) ∧ (TSwts ⊨ closureLTProperty (TracesWTS TSwts)) := by
   constructor
   · unfold isSafetyProperty
@@ -2136,6 +2355,9 @@ theorem closure_of_traces {AP: Type} (TSwts: TransitionSystemWTS AP) : isSafetyP
     simp only [Set.mem_iUnion, exists_prop]
     exact ⟨hσ, hω⟩
 
+/--
+Finite traces of a system are exactly the prefixes of its infinite traces.
+-/
 theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : TracesFin TSwts.TS = prefLTProperty (TracesWTS TSwts) := by
   unfold prefLTProperty
   rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
@@ -2303,6 +2525,9 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
         simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq] at hT₂
         rw [hT₂]
 
+/--
+Prefixes of the closure of a property coincide with the prefixes of the property.
+-/
 theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTProperty (closureLTProperty P) = prefLTProperty P := by
   rw [Set.Subset.antisymm_iff]
   constructor
@@ -2348,6 +2573,9 @@ theorem prefix_of_closure_is_prefix {AP: Type} (P : LTProperty AP) : prefLTPrope
       use σ
     · assumption
 
+/--
+Prefixes are monotonic with respect to set inclusion.
+-/
 theorem prefix_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P₂ → prefLTProperty P₁ ⊆ prefLTProperty P₂ := by
   repeat rw [Set.subset_def]
   intro h
@@ -2362,6 +2590,9 @@ theorem prefix_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P�
   simp only [Set.mem_iUnion, exists_prop]
   use σ
 
+/--
+Closure is monotonic with respect to set inclusion.
+-/
 theorem closure_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P₂ → closureLTProperty P₁ ⊆ closureLTProperty P₂ := by
   intro h
   unfold closureLTProperty
@@ -2378,6 +2609,9 @@ theorem closure_monotonicity {AP: Type} {P₁ P₂ : LTProperty AP} : P₁ ⊆ P
   apply h'
   assumption
 
+/--
+Prefixes distribute over union.
+-/
 theorem prefix_distributes_over_union {AP: Type} (P Q: LTProperty AP) : prefLTProperty (P ∪ Q) = prefLTProperty P ∪ prefLTProperty Q := by
   rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
   constructor
@@ -2424,6 +2658,9 @@ theorem prefix_distributes_over_union {AP: Type} (P Q: LTProperty AP) : prefLTPr
       apply h₂'
       assumption
 
+/--
+Closure distributes over union.
+-/
 theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closureLTProperty (P ∪ Q) = closureLTProperty P ∪ closureLTProperty Q := by
   rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
   constructor
@@ -2490,7 +2727,6 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       unfold Prefix
       simp only [AbstractFiniteWorld.mk.injEq, heq_eq_eq, true_and]
       funext i
-
       unfold pref Prefix at hP
       rw [Set.mem_def] at hP
       simp only [AbstractFiniteWorld.mk.injEq, exists_eq_left', heq_eq_eq] at hP
@@ -2556,6 +2792,9 @@ theorem closure_distributes_over_union {AP: Type} (P Q: LTProperty AP) : closure
       apply h₂'
       exact hσ'
 
+/--
+Closure is idempotent, i.e., applying closure twice is the same as applying it once.
+-/
 theorem closure_idempotent {AP: Type} (P: LTProperty AP) : closureLTProperty (closureLTProperty P) = closureLTProperty P := by
   rw [Set.Subset.antisymm_iff, Set.subset_def, Set.subset_def]
   constructor
@@ -2584,7 +2823,9 @@ theorem closure_idempotent {AP: Type} (P: LTProperty AP) : closureLTProperty (cl
     assumption
 
 /-!
-Now we will prove a theorem about **Finite Trace Inclusion and Safety Properties**.
+## Finite Trace Inclusion and Safety Properties
+
+Finite trace inclusion between systems is equivalent to preservation of satisfaction for all safety properties.
 -/
 theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : TransitionSystemWTS AP) : (TracesFin TSwts₁.TS ⊆ TracesFin TSwts₂.TS) ↔ ∀ (P: LTProperty AP), isSafetyProperty P → (TSwts₂ ⊨ P → TSwts₁ ⊨ P) := by
   constructor
@@ -2632,6 +2873,9 @@ theorem safety_finite_trace_inclusion {AP: Type} (TSwts₁ TSwts₂ : Transition
     rw [← h₅]
     assumption
 
+/--
+Finite trace equivalence between systems is equivalent to satisfaction of all safety properties being equivalent.
+-/
 theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : TransitionSystemWTS AP) : (TracesFin TSwts₁.TS = TracesFin TSwts₂.TS) ↔ ∀ (P: LTProperty AP), isSafetyProperty P → (TSwts₁ ⊨ P ↔ TSwts₂ ⊨ P) := by
   rw [Set.Subset.antisymm_iff]
   repeat rw [safety_finite_trace_inclusion]
@@ -2651,7 +2895,9 @@ theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : Transiti
       simp only [imp_self]
     )
 
-
+/--
+A structure used in the proof relating finite trace and trace inclusion.
+-/
 structure ftti_ProofStructure {AP: Type} {TS : TransitionSystem AP} (n : ℕ) where
   f : (m : ℕ) → (Fin (m + 1))  → TS.S
   Iseq : Fin (n + 1) → Set ℕ
@@ -2660,7 +2906,9 @@ structure ftti_ProofStructure {AP: Type} {TS : TransitionSystem AP} (n : ℕ) wh
   h₂: ∃ (p : FinitePathFragment TS), ((PathFragment.finite p) ∈ PathsFin TS) ∧ (p.n = n) ∧ (∀ i, p.states i = Sseq i)
   h₃: ∀ m ∈ Iseq n, ∀ (i : Fin (n + 1)), f m i = Sseq i
 
-
+/--
+Trace inclusion is equivalent to finite trace inclusion if the containing system is finite.
+-/
 theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS AP) (TS : TransitionSystem AP) (hfin : isFinite TS) : Traces TSwts.TS ⊆ Traces TS ↔ TracesFin TSwts.TS ⊆ TracesFin TS := by
   unfold isFinite at hfin
   constructor
@@ -2870,14 +3118,15 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
 
       sorry
 
-
 /-!
-We will now define **Liveness** properties.
+## Liveness Properties
+
+A property is a liveness property if every finite word is a prefix of some world in the property.
 -/
 def isLivenessProperty {AP: Type} (P: LTProperty AP) : Prop := prefLTProperty P = {ω | ω : FiniteWorld AP}
 
-/-!
-The only LT property over AP that is both a safety and a liveness property is (2^AP)^ω.
+/--
+The only LT property that is both a safety and a liveness property is the trivial property.
 -/
 theorem intersection_safety_liveness {AP: Type} (P: LTProperty AP) : isSafetyProperty P ∧ isLivenessProperty P → P = {σ | σ : World AP} := by
   intro h
@@ -2889,7 +3138,7 @@ theorem intersection_safety_liveness {AP: Type} (P: LTProperty AP) : isSafetyPro
   rw [hlive]
   simp only [exists_eq, Set.setOf_true, Set.subset_univ]
 
-/-!
+/--
 Any LT property can be decomposed into a safety and a liveness property.
 -/
 theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTProperty AP), isSafetyProperty Psafe ∧ isLivenessProperty Plive ∧ P = Psafe ∩ Plive := by
@@ -2982,9 +3231,8 @@ theorem decomposition {AP: Type} (P: LTProperty AP) : ∃ (Psafe Plive : LTPrope
 
   use closureLTProperty P, Plive, hsafe, hlive
 
-
-/-!
-The above is in fact the *sharpest* decomposition.
+/--
+The above decomposition is the sharpest possible.
 -/
 theorem sharpest_decomposition {AP: Type} (P: LTProperty AP) : ∀ (Psafe Plive : LTProperty AP), isSafetyProperty Psafe ∧ isLivenessProperty Plive ∧ P = Psafe ∩ Plive → (closureLTProperty P ⊆ Psafe) ∧ Plive ⊆ P ∪ ({σ | σ : World AP} \ closureLTProperty P) := by
   intro Psafe Plive h
