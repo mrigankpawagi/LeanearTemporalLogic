@@ -1,3 +1,12 @@
+/-
+# LTL
+
+This module defines the syntax of Linear Temporal Logic (LTL), parameterized by the type of atomic propositions
+that can be used in the formulas. It provides both the minimal syntax and convenient derived operators,
+as well as functions for measuring formula complexity. It also defines Propositional Logic (PL) formulas
+for completeness, since their satisfaction is a building block for satisfaction of LTL formulas.
+-/
+
 import Mathlib
 
 /-!
@@ -16,6 +25,8 @@ inductive LTLFormula (AP: Type) : Type
 
 /-!
 We will also define a *PL Formula* similar to an LTL formula without temporal operators.
+`PLFormula AP` is the type of propositional logic formulas over atomic propositions of type `AP`.
+It can be seen as a subset of `LTLFormula`, omitting temporal operators.
 -/
 inductive PLFormula (AP: Type) : Type
 | True
@@ -99,6 +110,8 @@ infixl:50 (priority := high) " 𝓦 " => weakuntil
 
 /-!
 The *length* of a formula is the number of operators in it. We count only the basic operators.
+This can be used to reason about the structural complexity of formulas, which is useful in showing
+the time complexity of model-checking algorithms.
 -/
 def length {AP: Type} : LTLFormula AP → ℕ
 | ⊤ => 0
@@ -135,15 +148,13 @@ end LTLFormula
 
 namespace PLFormula
 /-!
-Since PL Formulas can be seen as LTL Formulas without temporal operators, we will define a coercion from PLFormula to LTLFormula.
+Since PL Formulas can be seen as LTL Formulas without temporal operators, we will define a transformation from PLFormula to LTLFormula.
 -/
 def toLTLFormula {AP: Type} : PLFormula AP → LTLFormula AP
 | PLFormula.True => ⊤
 | PLFormula.atom a => LTLFormula.atom a
 | PLFormula.not ϕ => ¬ (PLFormula.toLTLFormula ϕ)
 | PLFormula.and ϕ ψ => (PLFormula.toLTLFormula ϕ) ∧ (PLFormula.toLTLFormula ψ)
-
-instance {AP: Type} : Coe (PLFormula AP) (LTLFormula AP) := ⟨PLFormula.toLTLFormula⟩
 
 def toLTLFormula_or {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∨ ψ) = toLTLFormula ϕ ∨ toLTLFormula ψ := by
   simp only [toLTLFormula]
