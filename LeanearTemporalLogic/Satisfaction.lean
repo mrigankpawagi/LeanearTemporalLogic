@@ -11,6 +11,8 @@ import LeanearTemporalLogic.LTL
 import LeanearTemporalLogic.TransitionSystems
 import LeanearTemporalLogic.LTProperty
 
+set_option linter.flexible true
+
 /-!
 ## Satisfaction and Equivalence Type Classes
 
@@ -2896,15 +2898,21 @@ theorem safety_finite_trace_equivalence {AP: Type} (TSwts₁ TSwts₂ : Transiti
     )
 
 /--
-A structure used in the proof relating finite trace and trace inclusion.
+Structure used in the proof relating finite trace and trace inclusion.
 -/
-structure ftti_ProofStructure {AP: Type} {TS : TransitionSystem AP} (n : ℕ) where
+structure ftti_ProofStructure_0 {AP: Type} {TS : TransitionSystem AP} (n : ℕ) (t : InfiniteTrace AP) where
   f : (m : ℕ) → (Fin (m + 1))  → TS.S
   Iseq : Fin (n + 1) → Set ℕ
   Sseq : Fin (n + 1) → TS.S
   h₁: ∀ (k : Fin n), Iseq (k + 1) ⊆ Iseq k
   h₂: ∃ (p : FinitePathFragment TS), ((PathFragment.finite p) ∈ PathsFin TS) ∧ (p.n = n) ∧ (∀ i, p.states i = Sseq i)
   h₃: ∀ m ∈ Iseq n, ∀ (i : Fin (n + 1)), f m i = Sseq i
+  h₄: TS.I (Sseq 0)
+  h₅: ∀ (i : Fin (n + 1)), TS.L (Sseq i) = t i
+
+structure ftti_ProofStructure_1 {α : Type} (n : ℕ) (f : α → ℕ) where
+  s : Fin (n + 1) → α
+  h : ∀ (k : Fin n), f (s k) < f (s (k + 1))
 
 /--
 Trace inclusion is equivalent to finite trace inclusion if the containing system is finite.
@@ -3057,7 +3065,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
 
       let finPathState m n : TS.S := (finPath m).states n
 
-      let proofStructure (n : ℕ) : ftti_ProofStructure n :=
+      let proofStructure (n : ℕ) : ftti_ProofStructure_0 n T :=
         match n with
         | 0 => by
           have hm : ∃ m, ∀ k, ∃ j > k, (finPathState m 0) = (finPathState j 0) := by
@@ -3079,12 +3087,93 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
               else
                 exact 0
 
-            -- let limits : Finset ℕ := { getLimitFromState s | s ∈ Selems }
+            have hmax : ∃ n, ∀ (s: TS.S), n ≥ getLimitFromState s := by
+              rw [← finite_iff_nonempty_fintype] at hfin
+              by_contra hmaxc
+              simp only [ge_iff_le, not_exists, not_forall, not_le] at hmaxc
 
-            -- find the maximum value in limits
-            -- let maxLimit : ℕ := limits.max
+              let proofStructure_1 (n : ℕ) : ftti_ProofStructure_1 n getLimitFromState := by
+                induction n with
+                | zero =>
+                  exact ⟨
+                    by
+                      specialize hmaxc 0
+                      let s := hmaxc.choose
+                      exact (fun n ↦ s),
+                    by simp⟩
+                | succ k prev =>
+                  obtain ⟨prevs, prevh⟩ := prev
+                  let ps := prevs k
+                  specialize hmaxc (getLimitFromState ps)
+                  let ns := hmaxc.choose
+                  exact ⟨
+                    fun m ↦ if m < k + 1 then prevs m else ns,
+                    by
+                      intro i
+                      if c : i < k then
+                        have hi : i.succ < k + 1 := sorry
+                        have hi' : i.castSucc < k + 1 := sorry
+                        simp only [Fin.coe_eq_castSucc, hi', ↓reduceIte, Fin.coe_castSucc,
+                          Fin.cast_val_eq_self, Fin.coeSucc_eq_succ, hi, Fin.val_succ, Nat.cast_add,
+                          Nat.cast_one, gt_iff_lt]
+                        specialize prevh (Fin.mk i (by sorry))
+                        simp at prevh
+                        assumption
+                      else
+                        simp at c
+                        have hi : ↑k < Fin.last (k + 1) := sorry
+                        simp only [c, Fin.val_last, Fin.lt_add_one_iff, hi, ↓reduceIte,
+                          Fin.val_natCast, lt_self_iff_false, gt_iff_lt]
+                        rw [Nat.mod_eq_of_lt (by sorry)]
+                        unfold ns
+                        have hns := hmaxc.choose_spec
+                        unfold ps at hns
+                        assumption⟩
+
+              let f (n : ℕ) : TS.S := (proofStructure_1 n).s n
+
+              have hfinc' (a : ℕ) : getLimitFromState (f a) < getLimitFromState (f (a + 1)) := by
+                have hf := (proofStructure_1 (a + 1)).h a
+                unfold f
+                simp only [Fin.natCast_eq_last, Fin.val_last] at hf
+                have ha : (proofStructure_1 (a + 1)).s ↑a = (proofStructure_1 a).s ↑a := by
 
 
+                  sorry
+                rw [ha] at hf
+                rw [← @Nat.cast_add_one] at hf
+                assumption
+
+              have hfinc (a b : ℕ) : a < b → getLimitFromState (f a) < getLimitFromState (f b) := by
+                induction b with
+                | zero => simp
+                | succ k ih =>
+                  have hk := hfinc' k
+                  intro hk'
+                  if c : a < k then
+                    apply ih at c
+                    apply Nat.lt_trans c hk
+                  else
+                    simp at c
+                    rw [Nat.lt_add_one_iff] at hk'
+                    have hk'' : a = k := by
+                      rw [Nat.eq_iff_le_and_ge]
+                      constructor <;> assumption
+                    rw [hk'']
+                    assumption
+
+              have hf := not_injective_infinite_finite f
+              rw [Function.not_injective_iff] at hf
+              obtain ⟨a, b, hf, hab⟩ := hf
+              rw [Nat.ne_iff_lt_or_gt] at hab
+              cases hab with
+              | _ hab =>
+                apply hfinc at hab
+                rw [hf] at hab
+                simp at hab
+
+            obtain ⟨max, hmax⟩ := hmax
+            specialize hc (max + 1)
             sorry
 
           let m := hm.choose
@@ -3101,22 +3190,53 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
             by
               sorry,
             by
+              sorry,
+            by
+              sorry,
+            by
               sorry⟩
         | k + 1 => sorry
 
       let π : InfinitePathFragment TS := ⟨fun i => (proofStructure i).Sseq i, by
           intro i
-          unfold proofStructure
-          simp only [Nat.reduceAdd, eq_mp_eq_cast, Fin.natCast_eq_last, Nat.cast_add, Nat.cast_one]
-
-
+          simp only [Fin.natCast_eq_last, Nat.cast_add, Nat.cast_one]
           sorry⟩
 
       unfold Traces TracesFromState TraceFromPathFragmentSet
       simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop]
       use (π.states 0)
+      constructor
+      · unfold π
+        simp only [Nat.reduceAdd, Nat.cast_zero, Fin.isValue]
+        apply (proofStructure 0).h₄
+      · use (PathFragment.infinite π)
+        constructor
+        · have hstart := path_starts_from_startState (PathFragment.infinite π) (by sorry)
+          unfold startStatePathFragment at hstart
+          simp only at hstart
+          assumption
+        · unfold TraceFromPathFragment InfiniteTraceFromInfinitePathFragment
+          simp only
+          match t with
+          | Trace.finite t' =>
+            unfold TraceFromPathFragment InfiniteTraceFromInfinitePathFragment at ht
+            simp at ht
+          | Trace.infinite t' =>
+            simp only [Trace.infinite.injEq]
+            funext i
+            have hT := (proofStructure i).h₅
+            unfold π
+            simp only [Fin.natCast_eq_last]
+            specialize hT i
+            unfold TraceFromPathFragment InfiniteTraceFromInfinitePathFragment at ht
+            simp only [Trace.infinite.injEq] at ht
+            rw [ht]
+            simp only
+            simp only [Fin.natCast_eq_last, Fin.val_last] at hT
+            rw [hT]
+            unfold T InfiniteTraceFromInfinitePathFragment
+            rfl
 
-      sorry
 
 /-!
 ## Liveness Properties
