@@ -29,7 +29,7 @@ namespace TransitionSystem
 A transition system is *finite* if its set of states, actions, and atomic propositions are all finite.
 -/
 def isFinite {AP: Type} (TS : TransitionSystem AP) : Prop :=
-  Nonempty (Fintype TS.S) ∧ Nonempty (Fintype TS.Act) ∧ Nonempty (Fintype AP)
+  Finite TS.S ∧ Finite TS.Act ∧ Finite AP
 
 /--
 The set of direct successors of a state `s` via action `α`.

@@ -116,7 +116,7 @@ These lemmas provide convenient equivalences for satisfaction of various logical
 /--
 Satisfaction of negation: `(σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ))`.
 -/
-def world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+theorem world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
   simp only [Satisfaction.Satisfies, not_def]
   rw [world_satisfies_ltl]
 
@@ -142,21 +142,21 @@ def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) 
 /--
 Satisfaction of next: `(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)`.
 -/
-def world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
+theorem world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
   simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
 /--
 Satisfaction of conjunction: `(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))`.
 -/
-def world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+theorem world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
   simp only [Satisfaction.Satisfies, and_def]
   repeat rw [world_satisfies_ltl]
 
 /--
 Satisfaction of until: `(σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁)))`.
 -/
-def world_satisfies_until {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
+theorem world_satisfies_until {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁))) := by
   simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
 
@@ -1992,8 +1992,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
           assumption
         · unfold endStateExecutionFragment e eInf infinitePathFragmentToInfiniteExecutionFragment
           simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast, Fin.val_last]
-      specialize hΦr (p.states n) hreach
-      assumption
+      exact hΦr (p.states n) hreach
 
 /-!
 ## Safety Properties
@@ -3072,7 +3071,6 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
             by_contra hc
             simp only [gt_iff_lt, not_exists, not_forall, not_and] at hc
             obtain ⟨hfin, _, _⟩ := hfin
-            let ⟨Selems, Scomplete⟩ := hfin
 
             let getLimit : ℕ → ℕ := fun n => by
               specialize hc n
@@ -3088,7 +3086,6 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
                 exact 0
 
             have hmax : ∃ n, ∀ (s: TS.S), n ≥ getLimitFromState s := by
-              rw [← finite_iff_nonempty_fintype] at hfin
               by_contra hmaxc
               simp only [ge_iff_le, not_exists, not_forall, not_le] at hmaxc
 
