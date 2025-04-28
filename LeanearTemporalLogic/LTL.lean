@@ -9,6 +9,8 @@ for completeness, since their satisfaction is a building block for satisfaction 
 
 import Mathlib
 
+set_option linter.flexible true
+
 /-!
 Now we define a *minimal* syntax for LTL formulas. We will add more operators later.
 LTLformulae are parametrized by the type of atomic propositions.
@@ -49,10 +51,7 @@ instance : Not Prop := ⟨fun p ↦ ¬ p⟩
 instance {AP: Type} : Not (LTLFormula AP) := ⟨LTLFormula.not⟩
 instance {AP: Type} : Not (PLFormula AP) := ⟨PLFormula.not⟩
 prefix:50 (priority := high) "¬ " => Not.not
-
 attribute [match_pattern] Not.not
-@[simp] theorem not_def {AP: Type} (ϕ : LTLFormula AP) : (¬ ϕ) = LTLFormula.not ϕ := rfl
-@[simp] theorem not_def_PL {AP: Type} (ϕ : PLFormula AP) : (¬ ϕ) = PLFormula.not ϕ := rfl
 
 -- `ϕ ∧ ψ` for `and ϕ ψ`
 class And (α : Type) where
@@ -62,10 +61,7 @@ instance : And Prop := ⟨fun p q ↦ p ∧ q⟩
 instance {AP: Type} : And (LTLFormula AP) := ⟨LTLFormula.and⟩
 instance {AP: Type} : And (PLFormula AP) := ⟨PLFormula.and⟩
 infixl:65 (priority := high) " ∧ " => And.and
-
 attribute [match_pattern] And.and
-@[simp] theorem and_def {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ∧ ψ) = LTLFormula.and ϕ ψ := rfl
-@[simp] theorem and_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∧ ψ) = PLFormula.and ϕ ψ := rfl
 
 -- `ϕ ∨ ψ` for `or ϕ ψ`
 class Or (α : Type) where
@@ -75,12 +71,9 @@ instance : Or Prop := ⟨fun p q ↦ p ∨ q⟩
 instance {AP: Type} : Or (LTLFormula AP) := ⟨fun ϕ ψ ↦ ¬ ((¬ ϕ) ∧ (¬ ψ))⟩
 instance {AP: Type} : Or (PLFormula AP) := ⟨fun ϕ ψ ↦ ¬ ((¬ ϕ) ∧ (¬ ψ))⟩
 infixl:65 (priority := high) " ∨ " => Or.or
-def or {AP: Type} (ϕ ψ : LTLFormula AP) : LTLFormula AP := Or.or ϕ ψ
-def or_PL {AP: Type} (ϕ ψ : PLFormula AP) : PLFormula AP := Or.or ϕ ψ
-
 attribute [match_pattern] Or.or
-@[simp] theorem or_def {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
-@[simp] theorem or_def_PL {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
+
+theorem or_def {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
 
 -- `◯ ϕ` for `next ϕ`
 prefix:65 (priority := high) "◯ " => next
@@ -93,10 +86,14 @@ infixl:50 (priority := high) " 𝓤 " => LTLFormula.until
 def eventually {AP: Type} (ϕ : LTLFormula AP) : LTLFormula AP := LTLFormula.until True ϕ
 prefix:65 (priority := high) "♢ " => eventually
 
+def eventually_def {AP: Type} (ϕ : LTLFormula AP) : (♢ ϕ) = (True 𝓤 ϕ) := rfl
+
 -- Always
 -- `□ ϕ` for `always ϕ`
 def always {AP: Type} (ϕ : LTLFormula AP) : LTLFormula AP := not (eventually (not ϕ))
 prefix:65 (priority := high) "□ " => always
+
+def always_def {AP: Type} (ϕ : LTLFormula AP) : (□ ϕ) = (¬ ♢ (¬ ϕ)) := rfl
 
 -- `⊤` for `True` and `⊥` for `False`
 def False {AP: Type} : LTLFormula AP := not True
@@ -124,13 +121,21 @@ def length {AP: Type} : LTLFormula AP → ℕ
 /-!
 We will define some lemmas to make it easier to calculate the length of a formula with other operators.
 -/
+@[simp]
+def length_not {AP: Type} (ϕ : LTLFormula AP) : length (¬ ϕ) = 1 + length ϕ := rfl
+
+@[simp]
+def length_and {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ ∧ ψ) = 1 + length ϕ + length ψ := rfl
+
+@[simp]
 def length_or {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
-  simp only [or_def, not_def, and_def]
-  repeat rw [length]
+  rw [or_def, length_not, length_and, length_not, length_not]
   omega
 
+@[simp]
 def length_eventually {AP: Type} (ϕ : LTLFormula AP) : length (♢ ϕ) = 1 + length ϕ := rfl
 
+@[simp]
 def length_always {AP: Type} (ϕ : LTLFormula AP) : length (□ ϕ) = 3 + length ϕ := by
   rw [always]
   rw [length, length_eventually, length]
@@ -147,6 +152,12 @@ example {AP: Type} (a b : AP) : length ((◯ atom a) ∨ atom b) = 5 := by
 end LTLFormula
 
 namespace PLFormula
+
+/-!
+Some lemmas to work with PL formulas.
+-/
+theorem or_def {AP: Type} (ϕ ψ : PLFormula AP) : (ϕ ∨ ψ) = (¬ ((¬ ϕ) ∧ (¬ ψ))) := rfl
+
 /-!
 Since PL Formulas can be seen as LTL Formulas without temporal operators, we will define a transformation from PLFormula to LTLFormula.
 -/
@@ -156,23 +167,31 @@ def toLTLFormula {AP: Type} : PLFormula AP → LTLFormula AP
 | PLFormula.not ϕ => ¬ (PLFormula.toLTLFormula ϕ)
 | PLFormula.and ϕ ψ => (PLFormula.toLTLFormula ϕ) ∧ (PLFormula.toLTLFormula ψ)
 
+@[simp]
+def toLTLFormula_not {AP: Type} (ϕ : PLFormula AP) : toLTLFormula (¬ ϕ) = (¬ toLTLFormula ϕ) := rfl
+
+@[simp]
+def toLTLFormula_and {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∧ ψ) = toLTLFormula ϕ ∧ toLTLFormula ψ := rfl
+
+@[simp]
 def toLTLFormula_or {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∨ ψ) = toLTLFormula ϕ ∨ toLTLFormula ψ := by
-  simp only [toLTLFormula]
-  simp only [LTLFormula.not_def, LTLFormula.and_def, LTLFormula.or_def]
-
-def toLTLFormula_not {AP: Type} (ϕ : PLFormula AP) : toLTLFormula (¬ ϕ) = (¬ toLTLFormula ϕ) := by
-  simp only [toLTLFormula]
-
-def toLTLFormula_and {AP: Type} (ϕ ψ : PLFormula AP) : toLTLFormula (ϕ ∧ ψ) = toLTLFormula ϕ ∧ toLTLFormula ψ := by
-  simp only [toLTLFormula]
+  rw [or_def, toLTLFormula_not, toLTLFormula_and, toLTLFormula_not, toLTLFormula_not]
+  rw [LTLFormula.or_def]
 
 /-!
 We can also define the length of a PL formula by using the above definition.
 -/
 def length {AP: Type} (ϕ: PLFormula AP) : ℕ := LTLFormula.length ϕ.toLTLFormula
 
+@[simp]
+def length_not {AP: Type} (ϕ : PLFormula AP) : length (¬ ϕ) = 1 + length ϕ := rfl
+
+@[simp]
+def length_and {AP: Type} (ϕ ψ : PLFormula AP) : length (ϕ ∧ ψ) = 1 + length ϕ + length ψ := rfl
+
+@[simp]
 def length_or {AP: Type} (ϕ ψ : PLFormula AP) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
-  unfold length
-  rw [toLTLFormula_or, LTLFormula.length_or]
+  rw [or_def, length_not, length_and, length_not, length_not]
+  omega
 
 end PLFormula

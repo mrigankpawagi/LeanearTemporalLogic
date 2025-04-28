@@ -116,28 +116,25 @@ These lemmas provide convenient equivalences for satisfaction of various logical
 /--
 Satisfaction of negation: `(σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ))`.
 -/
-theorem world_satisfies_negation {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
-  simp only [Satisfaction.Satisfies, not_def]
-  rw [world_satisfies_ltl]
+theorem world_satisfies_not {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+  simp only [Satisfaction.Satisfies]
+  rfl
+
+/--
+Satisfaction of conjunction: `(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))`.
+-/
+theorem world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+  simp only [Satisfaction.Satisfies]
+  rfl
 
 /--
 Satisfaction of disjunction: `(σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂))`.
 -/
 def world_satisfies_or {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
-  simp only [Satisfaction.Satisfies, or_def, not_def, and_def]
-  repeat rw [world_satisfies_ltl]
-  simp only [Not.not, Or.or]
-  constructor
-  · intro h
-    contrapose h
-    simp only [not_or] at h
-    simp only [not_not]
-    assumption
-  · intro h
-    contrapose h
-    simp only [not_not] at h
-    simp only [not_or]
-    assumption
+  rw [or_def, world_satisfies_not, world_satisfies_and, world_satisfies_not, world_satisfies_not]
+  simp only [Not.not, And.and]
+  rw [not_and, not_not, ← or_iff_not_imp_left]
+  rfl
 
 /--
 Satisfaction of next: `(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)`.
@@ -145,13 +142,6 @@ Satisfaction of next: `(σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ)`.
 theorem world_satisfies_next {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (◯ ϕ)) ↔ ((σ[1…]) ⊨ ϕ) := by
   simp only [Satisfaction.Satisfies]
   rw [world_satisfies_ltl]
-
-/--
-Satisfaction of conjunction: `(σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂))`.
--/
-theorem world_satisfies_and {AP: Type} (σ : World AP) (ϕ₁ ϕ₂ : LTLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
-  simp only [Satisfaction.Satisfies, and_def]
-  repeat rw [world_satisfies_ltl]
 
 /--
 Satisfaction of until: `(σ ⊨ (ϕ₁ 𝓤 ϕ₂)) ↔ ∃ (j: ℕ), (((σ[j…]) ⊨ ϕ₂) ∧ ∀ (k: ℕ), (k < j → ((σ[k…]) ⊨ ϕ₁)))`.
@@ -194,38 +184,9 @@ theorem world_satisfies_eventually {AP: Type} (σ : World AP) (ϕ : LTLFormula A
 Satisfaction of always: `(σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ)`.
 -/
 theorem world_satisfies_always {AP: Type} (σ : World AP) (ϕ : LTLFormula AP) : (σ ⊨ (□ ϕ)) ↔ ∀ (i: ℕ), ((σ[i…]) ⊨ ϕ) := by
-  unfold always
-
-  constructor
-  -- left to right
-  · intro h
-    intro i
-    simp only [Satisfaction.Satisfies] at h
-    rw [world_satisfies_ltl] at h
-    have h₁ := world_satisfies_eventually σ (¬ ϕ)
-    simp only [Satisfaction.Satisfies, not_def] at h₁
-    rw [h₁] at h
-    simp only [Not.not, not_exists] at h
-    specialize h i
-    rw [world_satisfies_ltl] at h
-    simp only [Not.not, not_not] at h
-    simp only [Satisfaction.Satisfies]
-    assumption
-
-  -- right to left
-  · intro h
-    simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl]
-    simp only [Not.not]
-    have h₁ := world_satisfies_eventually σ (¬ ϕ)
-    simp only [Satisfaction.Satisfies, not_def] at h₁
-    rw [h₁]
-    simp only [not_exists]
-    intro i
-    rw [world_satisfies_ltl]
-    simp only [Not.not, not_not]
-    simp only [Satisfaction.Satisfies] at h
-    apply h
+  rw [always_def, world_satisfies_not, world_satisfies_eventually]
+  simp only [world_satisfies_not]
+  simp [Not.not]
 
 /--
 Satisfaction of always eventually: `(σ ⊨ (□ ♢ ϕ)) ↔ ∀ (i: ℕ), ∃ (j: ℕ), ((σ[i+j…]) ⊨ ϕ)`.
@@ -308,7 +269,7 @@ theorem satisfies_for_first_time_iff_satisfies {AP: Type} (ϕ : LTLFormula AP) (
       intro k hk
       by_contra hc'
       specialize hc k
-      rw [world_satisfies_negation] at hc'
+      rw [world_satisfies_not] at hc'
       simp only [Not.not, not_not] at hc hc' hc'
       apply hc at hc'
       obtain ⟨i, hi, hc'⟩ := hc'
@@ -375,39 +336,28 @@ This includes preservation, duality, idependence, expansion, absorption, distrib
 Equivalence is preserved by negation.
 -/
 theorem equivalent_ltl_preserves_negation {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ ≡ ψ) ↔ ((¬ ϕ) ≡ (¬ ψ)) := by
-  simp only [Equivalent.Equiv, not_def]
+  simp only [Equivalent.Equiv]
   constructor
   · intro h
     funext σ
     have h₁ : Worlds ϕ σ = Worlds ψ σ := by rw [h]
     simp only [Worlds, eq_iff_iff] at h₁
     simp only [Worlds, eq_iff_iff]
-    simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl, world_satisfies_ltl]
+    rw [world_satisfies_not, world_satisfies_not]
     simp only [Not.not]
-    simp only [Satisfaction.Satisfies] at h₁
-    rw [h₁]
+    rw [not_iff_not]
+    exact h₁
   · intro h
     funext σ
     have h₁ : Worlds (¬ ϕ) σ = Worlds (¬ ψ) σ := by
-      simp only [Worlds, not_def, eq_iff_iff]
-      rw [← Worlds, ← Worlds]
-      rw [h]
-    simp only [Worlds, not_def, eq_iff_iff] at h₁
+      rw [funext_iff] at h
+      exact h σ
+    simp only [Worlds, eq_iff_iff] at h₁
     simp only [Worlds, eq_iff_iff]
-    simp only [Satisfaction.Satisfies]
-    simp only [Satisfaction.Satisfies] at h₁
-    rw [world_satisfies_ltl, world_satisfies_ltl] at h₁
+    rw [world_satisfies_not, world_satisfies_not] at h₁
     simp only [Not.not] at h₁
-    constructor
-    · intro h'
-      contrapose h'
-      rw [h₁]
-      assumption
-    · intro h'
-      contrapose h'
-      rw [← h₁]
-      assumption
+    rw [not_iff_not] at h₁
+    exact h₁
 
 /--
 Equivalence is preserved by always.
@@ -439,89 +389,52 @@ theorem equivalent_ltl_preserves_always {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ
 Double negation: `(¬ (¬ ϕ)) ≡ ϕ`.
 -/
 theorem ltl_double_negation {AP: Type} (ϕ : LTLFormula AP) : (¬ (¬ ϕ)) ≡ ϕ := by
-  simp only [Equivalent.Equiv, not_def]
+  simp only [Equivalent.Equiv]
   funext σ
   simp only [Worlds, eq_iff_iff]
-  constructor
-  · intro h
-    simp only [Satisfaction.Satisfies] at h
-    rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp only [Not.not, not_not] at h
-    simp only [Satisfaction.Satisfies]
-    assumption
-  · intro h
-    simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl, world_satisfies_ltl]
-    simp only [Not.not, not_not]
-    assumption
+  rw [world_satisfies_not, world_satisfies_not]
+  simp only [Not.not]
+  rw [not_not]
 
 /--
 Duality for next: `(¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))`.
 -/
 theorem ltl_duality_next {AP: Type} (ϕ : LTLFormula AP) : ((¬ (◯ ϕ)) ≡ (◯ (¬ ϕ))) := by
-  simp only [Equivalent.Equiv, not_def]
+  simp only [Equivalent.Equiv]
   funext σ
   simp only [Worlds, eq_iff_iff]
-  constructor
-
-  -- left to right
-  · intro h
-    simp only [Satisfaction.Satisfies] at h
-    rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl, world_satisfies_ltl]
-    assumption
-
-  -- right to left
-  · intro h
-    simp only [Satisfaction.Satisfies] at h
-    rw [world_satisfies_ltl, world_satisfies_ltl] at h
-    simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl, world_satisfies_ltl]
-    assumption
+  rw [world_satisfies_not, world_satisfies_next, world_satisfies_next, world_satisfies_not]
 
 /--
 Duality for eventually: `(¬ (♢ ϕ)) ≡ (□ (¬ ϕ))`.
 -/
 theorem ltl_duality_eventually {AP: Type} (ϕ : LTLFormula AP) : ((¬ (♢ ϕ)) ≡ (□ (¬ ϕ))) := by
-  simp only [Equivalent.Equiv, not_def]
+  simp only [Equivalent.Equiv]
   funext σ
   simp only [Worlds, eq_iff_iff]
+  rw [always_def]
+  repeat rw [world_satisfies_not, world_satisfies_eventually]
+  simp only [Not.not]
+  rw [not_iff_not]
   constructor
-
-  -- left to right
   · intro h
-    simp only [Satisfaction.Satisfies] at h
-    rw [world_satisfies_ltl] at h
-    have h₁ : ¬ (σ ⊨ (♢ ϕ)) := by
-      simp only [Satisfaction.Satisfies]
-      assumption
-    rw [world_satisfies_eventually] at h₁
-    simp only [Not.not, not_exists] at h₁
-    rw [world_satisfies_always]
-    intro i
+    obtain ⟨i, hi⟩ := h
+    use i
     simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl]
-    specialize h₁ i
-    simp only [Satisfaction.Satisfies] at h₁
-    apply h₁
-
-  -- right to left
+    simp only [Satisfaction.Satisfies] at hi
+    unfold world_satisfies_ltl world_satisfies_ltl
+    simp only [Not.not]
+    rw [not_not]
+    exact hi
   · intro h
+    obtain ⟨i, hi⟩ := h
+    use i
     simp only [Satisfaction.Satisfies]
-    rw [world_satisfies_ltl]
-    have h₁ : ¬ (σ ⊨ (♢ ϕ)) := by
-      rw [world_satisfies_eventually]
-      simp only [Not.not, not_exists]
-      intro i
-      simp only [Satisfaction.Satisfies]
-      rw [world_satisfies_always] at h
-      specialize h i
-      simp only [Satisfaction.Satisfies] at h
-      rw [world_satisfies_ltl] at h
-      apply h
-    simp only [Satisfaction.Satisfies] at h₁
-    apply h₁
+    simp only [Satisfaction.Satisfies] at hi
+    unfold world_satisfies_ltl world_satisfies_ltl at hi
+    simp only [Not.not] at hi
+    rw [not_not] at hi
+    exact hi
 
 /--
 Duality for always: `(¬ (□ ϕ)) ≡ (♢ (¬ ϕ))`.
@@ -548,7 +461,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
   rw [propext_iff, world_satisfies_weakuntil]
   constructor
   · intro h
-    rw [world_satisfies_negation, world_satisfies_until] at h
+    rw [world_satisfies_not, world_satisfies_until] at h
     simp only [Not.not, not_exists] at h
 
     if h₁ : ∀ x, ¬ (Suffix σ x ⊨ ψ) then
@@ -558,7 +471,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         intro i
         specialize h₁ i
         specialize h₂ i
-        rw [world_satisfies_and, world_satisfies_negation]
+        rw [world_satisfies_and, world_satisfies_not]
         constructor <;> assumption
       else
         left
@@ -566,29 +479,29 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
           simp only [not_forall] at h₂
           obtain ⟨i, hi⟩ := h₂
           use i
-          rw [world_satisfies_negation]
+          rw [world_satisfies_not]
           simp only [Not.not]
           assumption)
         obtain ⟨i, hi⟩ := h'
         obtain ⟨hl, hr⟩ := hi
-        rw [world_satisfies_negation] at hl
+        rw [world_satisfies_not] at hl
         simp only [Not.not] at hl
         rw [world_satisfies_until]
         use i
-        rw [world_satisfies_and, world_satisfies_negation]
+        rw [world_satisfies_and, world_satisfies_not]
         constructor
         · constructor
           · simp only [Not.not]
             assumption
-          · rw [world_satisfies_negation]
+          · rw [world_satisfies_not]
             specialize h₁ i
             assumption
         · intro k hk
           specialize hr k hk
           specialize h₁ k
-          rw [world_satisfies_negation] at hr
+          rw [world_satisfies_not] at hr
           simp only [Not.not, not_not] at hr
-          rw [world_satisfies_and, world_satisfies_negation]
+          rw [world_satisfies_and, world_satisfies_not]
           constructor <;> assumption
     else
       left
@@ -625,7 +538,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         simp only [Not.not, not_forall] at hl'
         obtain ⟨i, hi⟩ := hl'
         use i
-        rw [world_satisfies_negation]
+        rw [world_satisfies_not]
         simp only [Not.not]
         assumption)
       obtain ⟨k, hk⟩ := h''
@@ -642,10 +555,10 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       let hr' := hr
       specialize hr k hk'
       obtain ⟨hkl, hkr⟩ := hk
-      rw [world_satisfies_negation] at hkl
+      rw [world_satisfies_not] at hkl
       simp only [Not.not] at hr hkl hkl
       constructor
-      · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+      · rw [world_satisfies_and, world_satisfies_not, world_satisfies_not]
         simp only [Not.not]
         constructor <;> assumption
       · intro m hm
@@ -653,12 +566,12 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         rw [world_satisfies_and]
         have hmi : m < i := Nat.lt_trans hm hk'
         specialize hr' m hmi
-        rw [world_satisfies_negation]
-        rw [world_satisfies_negation] at hkr
+        rw [world_satisfies_not]
+        rw [world_satisfies_not] at hkr
         simp only [Not.not, not_not] at hkr
         constructor <;> assumption
   · intro h
-    rw [world_satisfies_negation, world_satisfies_until]
+    rw [world_satisfies_not, world_satisfies_until]
     simp only [Not.not, And.and, not_exists, not_and, not_forall, Classical.not_imp]
     cases h with
     | inl hl =>
@@ -667,7 +580,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       obtain ⟨j, hj, hl⟩ := hl
       if h' : j < i then
         use j, h'
-        rw [world_satisfies_and, world_satisfies_negation] at hj
+        rw [world_satisfies_and, world_satisfies_not] at hj
         obtain ⟨hjl, hjr⟩ := hj
         simp only [Not.not] at hjl
         assumption
@@ -677,13 +590,13 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
         cases h' with
         | inl hl' =>
           specialize hl i hl'
-          rw [world_satisfies_and, world_satisfies_negation] at hl
+          rw [world_satisfies_and, world_satisfies_not] at hl
           obtain ⟨hll, hlr⟩ := hl
           simp only [Not.not] at hlr
           contradiction
         | inr hr' =>
           rw [hr'] at hi
-          rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
+          rw [world_satisfies_and, world_satisfies_not, world_satisfies_not] at hj
           obtain ⟨hjl, hjr⟩ := hj
           simp only [Not.not] at hjr
           contradiction
@@ -694,7 +607,7 @@ theorem ltl_duality_until {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓤 ψ))
       rw [world_satisfies_and] at hr
       simp only [And.and] at hr
       obtain ⟨hrl, hrr⟩ := hr
-      rw [world_satisfies_negation] at hrr
+      rw [world_satisfies_not] at hrr
       simp only [Not.not] at hrr
       contradiction
 
@@ -726,7 +639,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           rw [world_satisfies_until]
           use i
           constructor
-          · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+          · rw [world_satisfies_and, world_satisfies_not, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not]
             simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff]
             assumption
           · intro k hk
@@ -739,7 +652,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
               contradiction)
             specialize hir k hk
             simp only [Not.not] at hir
-            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not]
             simp only [And.and, Not.not, not_and, not_not]
             constructor
             · constructor <;> assumption
@@ -749,7 +662,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
             right
             rw [world_satisfies_always]
             intro i
-            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not]
             simp only [And.and, Not.not, not_and, not_not]
             specialize h' i
             simp only [Not.not] at h'
@@ -767,11 +680,11 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
             obtain ⟨hil, hir⟩ := hi
             use i
             constructor
-            · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+            · rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_not, world_satisfies_not, world_satisfies_and, world_satisfies_not, world_satisfies_not]
               simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff]
               assumption
             · intro k hk
-              rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation]
+              rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not]
               simp only [And.and, Not.not, not_and, not_not]
               specialize hir k hk
               simp only [Not.not] at hir
@@ -789,12 +702,12 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           obtain ⟨j, hj, hl⟩ := hl
           use j
           constructor
-          · rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hj
+          · rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_not, world_satisfies_not, world_satisfies_and, world_satisfies_not, world_satisfies_not] at hj
             simp only [And.and, Not.not, not_and, not_not, Classical.imp_and_neg_imp_iff] at hj
             assumption
           · intro k hk
             specialize hl k hk
-            rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hl
+            rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not] at hl
             simp only [And.and, Not.not, not_and, not_not] at hl
             obtain ⟨hl₁, hl₂⟩ := hl
             obtain ⟨hl₁l, hl₁r⟩ := hl₁
@@ -805,7 +718,7 @@ theorem ltl_duality_weakuntil {AP: Type} (ϕ ψ : LTLFormula AP) : (¬ (ϕ 𝓦 
           intro i
           rw [world_satisfies_always] at hr
           specialize hr i
-          rw [world_satisfies_and, world_satisfies_negation, world_satisfies_and, world_satisfies_and, world_satisfies_negation, world_satisfies_negation] at hr
+          rw [world_satisfies_and, world_satisfies_not, world_satisfies_and, world_satisfies_and, world_satisfies_not, world_satisfies_not] at hr
           simp only [And.and, Not.not, not_and, not_not] at hr
           obtain ⟨hrl, hrr⟩ := hr
           obtain ⟨hrll, hrlr⟩ := hrl
@@ -1028,8 +941,8 @@ theorem ltl_expansion_until {AP: Type} (ϕ ψ : LTLFormula AP) : (ϕ 𝓤 ψ) �
   simp only [Equivalent.Equiv]
   funext σ
   simp only [Worlds]
-  rw [world_satisfies_or]
-  simp only [Satisfaction.Satisfies, and_def, eq_iff_iff]
+  rw [world_satisfies_or, world_satisfies_and]
+  simp only [Satisfaction.Satisfies, eq_iff_iff]
   constructor
   · intro h
     rw [world_satisfies_ltl] at h
@@ -1627,39 +1540,25 @@ instance {AP: Type} : Satisfaction (Set AP) (PLFormula AP) := ⟨fun A Φ ↦ A 
 /--
 Satisfaction of negation for PL formulae.
 -/
-def set_satisfies_negation {AP: Type} (σ : Set AP) (ϕ : PLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
+def set_satisfies_not {AP: Type} (σ : Set AP) (ϕ : PLFormula AP) : (σ ⊨ (¬ ϕ)) ↔ (¬ (σ ⊨ ϕ)) := by
   simp only [Satisfaction.Satisfies]
-  rw [PLFormula.toLTLFormula_not]
-  simp only [world_satisfies_ltl]
+  rfl
+
+/--
+Satisfaction of conjunctions for PL formulae.
+-/
+def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
+  simp only [Satisfaction.Satisfies]
+  rfl
 
 /--
 Satisfaction of disjunction for PL formulae.
 -/
 def set_satisfies_or {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∨ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∨ (σ ⊨ ϕ₂)) := by
-  simp only [Satisfaction.Satisfies]
-  rw [PLFormula.toLTLFormula_or]
-  simp only [or_def, not_def, and_def]
-  repeat rw [world_satisfies_ltl]
-  simp only [Not.not, Or.or]
-  constructor
-  · intro h
-    contrapose h
-    simp only [not_or] at h
-    simp only [not_not]
-    assumption
-  · intro h
-    contrapose h
-    simp only [not_not] at h
-    simp only [not_or]
-    assumption
-
-/--
-Satisfaction of conjunction for PL formulae.
--/
-def set_satisfies_and {AP: Type} (σ : Set AP) (ϕ₁ ϕ₂ : PLFormula AP) : (σ ⊨ (ϕ₁ ∧ ϕ₂)) ↔ ((σ ⊨ ϕ₁) ∧ (σ ⊨ ϕ₂)) := by
-  simp only [Satisfaction.Satisfies]
-  rw [PLFormula.toLTLFormula_and]
-  simp only [world_satisfies_ltl]
+  rw [PLFormula.or_def, set_satisfies_not, set_satisfies_and, set_satisfies_not, set_satisfies_not]
+  simp only [Not.not, And.and]
+  rw [not_and, not_not, ← or_iff_not_imp_left]
+  rfl
 
 end section
 
