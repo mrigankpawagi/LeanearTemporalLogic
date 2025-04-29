@@ -1607,15 +1607,15 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
     simp only [Set.mem_setOf_eq] at h'
     rw [isPath] at h'
     obtain ⟨hinit, hmax⟩ := h'
-    rw [isInitialPathFragment] at hinit
-    specialize h (startStatePathFragment π)
+    rw [PathFragment.isInitial] at hinit
+    specialize h (PathFragment.startState π)
     apply h at hinit
     rw [TracesFromInitialStateWTS] at hinit
     rw [Set.setOf_subset] at hinit
     specialize hinit (TraceFromPathWTS π h')
     apply hinit
     use π
-    use path_starts_from_startState π h'
+    use PathFragment.starts_from_startState π h'
     unfold TraceFromPathFromInitialStateWTS
     simp only
   · intro h
@@ -1636,7 +1636,7 @@ theorem ltproperty_satisfaction_allPaths {AP: Type} (TSwts: TransitionSystemWTS 
       unfold isPath
       obtain ⟨hl, hr⟩ := hπ'
       constructor
-      · unfold isInitialPathFragment
+      · unfold PathFragment.isInitial
         rw [hr]
         assumption
       · assumption
@@ -1747,16 +1747,16 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       unfold isReachableState at hs
       obtain ⟨e, he⟩ := hs
       obtain ⟨hel, her⟩ := he
-      let πtail : FinitePathFragment TS := finiteExecutionFragmentToFinitePathFragment e
+      let πtail : FinitePathFragment TS := FiniteExecutionFragment.toFinitePathFragment e
       have htail : πtail.states = e.states := by
-        unfold πtail finiteExecutionFragmentToFinitePathFragment
+        unfold πtail FiniteExecutionFragment.toFinitePathFragment
         simp only
       have en : e.n = πtail.n := by
-        unfold πtail finiteExecutionFragmentToFinitePathFragment
+        unfold πtail FiniteExecutionFragment.toFinitePathFragment
         simp only
       simp only at en
       simp only at htail
-      have hhead : ∃ π', π' ∈ PathsFromState s := path_originates_from_state_if_noTerminalState hTS s
+      have hhead : ∃ π', π' ∈ PathsFromState s := PathFragment.originates_from_state_if_noTerminalState hTS s
       obtain ⟨πhead, hπhead⟩ := hhead
       simp only at πhead
       simp only at h'
@@ -1767,7 +1767,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         unfold PathsFromState at hπhead
         simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨hπheadmax, _⟩ := hπhead
-        unfold isMaximalPathFragment endStatePathFragment at hπheadmax
+        unfold PathFragment.isMaximal FinitePathFragment.endState at hπheadmax
         simp only at hπheadmax
         specialize hTS (p.states (Fin.last p.n))
         contradiction
@@ -1775,39 +1775,38 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
         rw [c] at hπhead
         obtain ⟨headStates, headValid⟩ := p
 
-        unfold PathsFromState startStatePathFragment at hπhead
+        unfold PathsFromState PathFragment.startState at hπhead
         simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨_, headState0⟩ := hπhead
 
         -- combine πtail and πhead to form a path
         let π := PathFragment.infinite (PathFragment.concatenate_finite_and_infinite πtail ⟨headStates, headValid⟩ (by
-          rw [htail]
-          unfold endStateExecutionFragment at her
-          simp only
+          unfold FiniteExecutionFragment.endState at her
           rw [headState0]
           have heq : Fin.last e.n = Fin.last πtail.n := by
             rw [← Fin.natCast_eq_last]
             rw [← Fin.natCast_eq_last]
             simp only [en, Fin.natCast_eq_last]
-          rw [← heq]
           assumption
           ))
 
         have hπ : π ∈ Paths TS := by
-          unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment
+          unfold Paths isPath PathFragment.isInitial PathFragment.isMaximal FinitePathFragment.endState
           simp only [Set.mem_setOf_eq]
           constructor
-          · unfold startStatePathFragment π
+          · unfold PathFragment.startState π
             simp only
-            unfold isInitialExecutionFragment startStateExecutionFragment at hel
-            simp only at hel
+            unfold FiniteExecutionFragment.isInitial FiniteExecutionFragment.startState at hel
             unfold PathFragment.concatenate_finite_and_infinite
+            unfold InfinitePathFragment.startState
             simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le]
+            unfold InfinitePathFragment.startState at headState0
+            simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le] at headState0
             cases cc: e.n with
             | zero =>
               rw [headState0]
               simp only [← en, cc, lt_self_iff_false, ↓reduceIte]
-              unfold endStateExecutionFragment at her
+              unfold FiniteExecutionFragment.endState at her
               rw [← Fin.natCast_eq_last] at her
               simp only [cc, Nat.cast_zero] at her
               rw [← her]
@@ -1830,7 +1829,7 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
           unfold Paths isPath at hπ
           simp only [Set.mem_setOf_eq] at hπ
           obtain ⟨hπl, hπr⟩ := hπ
-          rw [maximalIffInfinitePathFragment hTS'] at hπr
+          rw [PathFragment.maximal_iff_infinite hTS'] at hπr
           simp only
           match c: π with
           | PathFragment.finite p =>
@@ -1838,12 +1837,14 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
             contradiction
           | PathFragment.infinite p =>
             simp only
-            unfold endStateExecutionFragment at her
+            unfold FiniteExecutionFragment.endState at her
             unfold π at c
             simp only [PathFragment.infinite.injEq] at c
             rw [← c]
             unfold PathFragment.concatenate_finite_and_infinite
             simp only [en, lt_self_iff_false, ↓reduceIte, tsub_self]
+            unfold InfinitePathFragment.startState at headState0
+            simp only at headState0
             rw [headState0]
 
         rw [hs] at h'
@@ -1872,24 +1873,23 @@ theorem invariant_satisfaction_reachability {AP: Type} (TSwts: TransitionSystemW
       have hreach : p.states n ∈ Reach TS := by
         unfold Reach isReachableState
         simp only [Set.mem_setOf_eq]
-        let eInf := infinitePathFragmentToInfiniteExecutionFragment p
+        let eInf := InfinitePathFragment.toInfiniteExecutionFragment p
         let e : FiniteExecutionFragment TS := ⟨n, fun i => eInf.states i, fun i => eInf.actions i, by
           intro i
           simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
           exact eInf.valid i⟩
         use e
         constructor
-        · unfold isInitialExecutionFragment startStateExecutionFragment
-          simp only
+        · unfold FiniteExecutionFragment.isInitial FiniteExecutionFragment.startState
           unfold Paths isPath at hπ
           simp only [Set.mem_setOf_eq] at hπ
           obtain ⟨hπl, hπr⟩ := hπ
-          unfold isInitialPathFragment startStatePathFragment at hπl
+          unfold PathFragment.isInitial PathFragment.startState at hπl
           simp only at hπl
-          unfold e eInf infinitePathFragmentToInfiniteExecutionFragment
+          unfold e eInf InfinitePathFragment.toInfiniteExecutionFragment
           simp only [Fin.val_zero]
           assumption
-        · unfold endStateExecutionFragment e eInf infinitePathFragmentToInfiniteExecutionFragment
+        · unfold FiniteExecutionFragment.endState e eInf InfinitePathFragment.toInfiniteExecutionFragment
           simp only [Fin.val_natCast, Fin.coe_castSucc, Fin.val_succ, id_eq, eq_mpr_eq_cast, Fin.val_last]
       exact hΦr (p.states n) hreach
 
@@ -1950,7 +1950,7 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
     simp only [Set.mem_image] at hp
     obtain ⟨π, hπ⟩ := hp
     obtain ⟨hπl, hπr⟩ := hπ
-    let hinfπ := path_originates_from_state_if_noTerminalState hTS (π.states (Fin.last π.n))
+    let hinfπ := PathFragment.originates_from_state_if_noTerminalState hTS (π.states (Fin.last π.n))
     obtain ⟨πinf, hπinf⟩ := hinfπ
 
     match πinf with
@@ -1958,7 +1958,7 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       unfold PathsFromState at hπinf
       simp only [Set.mem_setOf_eq] at hπinf
       obtain ⟨hmax, _⟩ := hπinf
-      unfold isMaximalPathFragment endStatePathFragment at hmax
+      unfold PathFragment.isMaximal FinitePathFragment.endState at hmax
       simp only at hmax
       specialize hTS (p.states (Fin.last p.n))
       contradiction
@@ -1967,8 +1967,9 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
         unfold PathsFromState at hπinf
         simp only [Set.mem_setOf_eq] at hπinf
         obtain ⟨_, hstart⟩ := hπinf
-        unfold startStatePathFragment at hstart
+        unfold PathFragment.startState at hstart
         simp only at hstart
+        unfold InfinitePathFragment.startState at hstart
         rw [hstart]
       let π' := PathFragment.concatenate_finite_and_infinite π p hcont
 
@@ -2018,21 +2019,22 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
 
       specialize h₁ Trace (PathFragment.infinite π')
       have hpath : (PathFragment.infinite π') ∈ PathsFromState s := by
-        unfold π' PathFragment.concatenate_finite_and_infinite PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment
+        unfold π' PathFragment.concatenate_finite_and_infinite PathsFromState PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState
         simp only [Set.mem_setOf_eq, Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le, true_and]
+        unfold InfinitePathFragment.startState
+        simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le]
         if c: 0 < π.n then
-          simp only [c, ↓reduceIte]
-          unfold PathsFinFromState startStatePathFragment at hπl
+          unfold PathsFinFromState FinitePathFragment.startState at hπl
           simp only [Set.mem_setOf_eq] at hπl
-          assumption
-        else
           simp only [c, ↓reduceIte]
+          exact hπl
+        else
           simp only [not_lt, nonpos_iff_eq_zero] at c
-          unfold PathsFinFromState startStatePathFragment at hπl
+          unfold PathsFinFromState FinitePathFragment.startState at hπl
           simp only [Set.mem_setOf_eq] at hπl
           rw [← hcont, ← hπl]
           rw [← Fin.natCast_eq_last]
-          simp only [c, Nat.cast_zero]
+          simp only [c, lt_self_iff_false, ↓reduceIte, Nat.cast_zero]
 
       specialize h₁ hpath
       have htr : Trace = TraceFromPathFromInitialStateWTS s (PathFragment.infinite π') hpath hsi := by
@@ -2075,7 +2077,7 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
 
     match π with
     | PathFragment.finite p =>
-      unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπpath
+      unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState at hπpath
       simp only [Set.mem_setOf_eq] at hπpath
       obtain ⟨hπl, hπr⟩ := hπpath
       specialize hTS (p.states (Fin.last p.n))
@@ -2089,10 +2091,10 @@ theorem safety_satisfaction {AP: Type} (TSwts: TransitionSystemWTS AP) (P: LTPro
       specialize h' πfin
 
       have h₀ : PathsFinFromState s πfin := by
-        unfold PathsFinFromState startStatePathFragment πfin
+        unfold PathsFinFromState FinitePathFragment.startState πfin
         rw [Set.setOf_app_iff]
         simp only [Fin.val_zero]
-        unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπpath
+        unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState at hπpath
         simp only [Set.mem_setOf_eq, true_and] at hπpath
         assumption
 
@@ -2274,44 +2276,48 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     simp only [Set.mem_iUnion, exists_prop]
 
     -- create a full path
-    let hπhead := path_originates_from_state_if_noTerminalState TSwts.h (πtail.states (Fin.last πtail.n))
+    let hπhead := PathFragment.originates_from_state_if_noTerminalState TSwts.h (πtail.states (Fin.last πtail.n))
     obtain ⟨πhead, hπhead⟩ := hπhead
     match πhead with
     | PathFragment.finite p =>
       unfold PathsFromState at hπhead
       simp only [Set.mem_setOf_eq] at hπhead
       obtain ⟨hπheadmax, _⟩ := hπhead
-      unfold isMaximalPathFragment endStatePathFragment at hπheadmax
+      unfold PathFragment.isMaximal FinitePathFragment.endState at hπheadmax
       simp only at hπheadmax
       obtain ⟨_, hTS⟩ := TSwts
       specialize hTS (p.states (Fin.last p.n))
       contradiction
     | PathFragment.infinite p =>
       let π := PathFragment.concatenate_finite_and_infinite πtail p (by
-        unfold PathsFromState startStatePathFragment at hπhead
+        unfold PathsFromState PathFragment.startState at hπhead
         simp only [Set.mem_setOf_eq] at hπhead
         obtain ⟨hπheadl, hπheadr⟩ := hπhead
         rw [hπheadr]
+        unfold FinitePathFragment.endState
+        rfl
       )
       have htrace : PathFragment.infinite π ∈ TSwts.TS.Paths := by
-        unfold Paths isPath isInitialPathFragment isMaximalPathFragment endStatePathFragment startStatePathFragment
+        unfold Paths isPath PathFragment.isInitial PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState
         simp only [Set.mem_setOf_eq, and_true]
         unfold π PathFragment.concatenate_finite_and_infinite
+        unfold InfinitePathFragment.startState
         simp only [Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le]
         if c: 0 < πtail.n then
           simp only [c, ↓reduceIte]
-          unfold PathsFinFromState startStatePathFragment at hπl
+          unfold PathsFinFromState FinitePathFragment.startState at hπl
           simp only [Set.mem_setOf_eq] at hπl
           rw [hπl]
           assumption
         else
           simp only [c, ↓reduceIte]
           simp only [not_lt, nonpos_iff_eq_zero] at c
-          unfold PathsFinFromState startStatePathFragment at hπl
+          unfold PathsFinFromState FinitePathFragment.startState at hπl
           simp only [Set.mem_setOf_eq] at hπl
-          unfold PathsFromState startStatePathFragment at hπhead
+          unfold PathsFromState PathFragment.startState at hπhead
           simp only [Set.mem_setOf_eq] at hπhead
           obtain ⟨_, hπhead⟩ := hπhead
+          unfold InfinitePathFragment.startState at hπhead
           rw [hπhead]
           rw [← Fin.natCast_eq_last]
           simp only [c, Nat.cast_zero]
@@ -2326,22 +2332,24 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
         use s, hs
         use (PathFragment.infinite π)
         use (by
-          unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment π
+          unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState π
           unfold PathFragment.concatenate_finite_and_infinite
+          unfold InfinitePathFragment.startState
           simp only [Set.mem_setOf_eq, Nat.cast_zero, zero_le, Nat.sub_eq_zero_of_le, true_and]
           if c: 0 < πtail.n then
             simp only [c, ↓reduceIte]
-            unfold PathsFinFromState startStatePathFragment at hπl
+            unfold PathsFinFromState FinitePathFragment.startState at hπl
             simp only [Set.mem_setOf_eq] at hπl
             rw [hπl]
           else
             simp only [c, ↓reduceIte]
             simp only [not_lt, nonpos_iff_eq_zero] at c
-            unfold PathsFinFromState startStatePathFragment at hπl
+            unfold PathsFinFromState FinitePathFragment.startState at hπl
             simp only [Set.mem_setOf_eq] at hπl
-            unfold PathsFromState startStatePathFragment at hπhead
+            unfold PathsFromState PathFragment.startState at hπhead
             simp only [Set.mem_setOf_eq] at hπhead
             obtain ⟨_, hπhead⟩ := hπhead
+            unfold InfinitePathFragment.startState at hπhead
             rw [hπhead]
             rw [← Fin.natCast_eq_last]
             simp only [c, Nat.cast_zero]
@@ -2369,9 +2377,10 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
             assumption
           have heq : i = πtail.n := by apply Nat.le_antisymm <;> assumption
           simp only [heq, tsub_self]
-          unfold PathsFromState startStatePathFragment at hπhead
+          unfold PathsFromState PathFragment.startState at hπhead
           simp only [Set.mem_setOf_eq] at hπhead
           obtain ⟨_, hπhead⟩ := hπhead
+          unfold InfinitePathFragment.startState at hπhead
           rw [hπhead]
           aesop
 
@@ -2393,7 +2402,7 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
     unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS at hT₁
     cases π with
     | finite p =>
-      unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
+      unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState at hπ
       simp only [Set.mem_setOf_eq] at hπ
       obtain ⟨hπ, _⟩ := hπ
       obtain ⟨_, hTS⟩ := TSwts
@@ -2410,12 +2419,12 @@ theorem finite_traces_are_prefixes {AP: Type} (TSwts: TransitionSystemWTS AP) : 
         simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
         exact hv⟩
       use πfin
-      unfold PathsFinFromState startStatePathFragment
+      unfold PathsFinFromState FinitePathFragment.startState
       simp only [Set.mem_setOf_eq]
       constructor
       · unfold πfin
         simp only [Fin.val_zero]
-        unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
+        unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState at hπ
         simp only [Set.mem_setOf_eq, true_and] at hπ
         assumption
       · unfold FiniteTraceFromFinitePathFragment πfin
@@ -2842,7 +2851,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
       unfold T' TraceFromPathFragment
       match π with
       | PathFragment.finite p =>
-        unfold PathsFromState isMaximalPathFragment endStatePathFragment at hπ
+        unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState at hπ
         simp only [Set.mem_setOf_eq] at hπ
         obtain ⟨hπ, _⟩ := hπ
         obtain ⟨_, hTS⟩ := TSwts
@@ -2877,10 +2886,10 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         simp only [Fin.coe_eq_castSucc, Fin.coe_castSucc, Fin.coeSucc_eq_succ, Fin.val_succ]
         exact hv⟩
       use πfin
-      unfold startStatePathFragment πfin
+      unfold FinitePathFragment.startState πfin
       simp only [Fin.val_zero]
       constructor
-      · unfold PathsFromState isMaximalPathFragment endStatePathFragment startStatePathFragment at hπ
+      · unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState PathFragment.startState at hπ
         simp only [Set.mem_setOf_eq, true_and] at hπ
         assumption
       · unfold FiniteTraceFromFinitePathFragment
@@ -2899,7 +2908,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
     obtain ⟨s, hs, ht⟩ := ht
     obtain ⟨π, hπ, ht⟩ := ht
     obtain ⟨hπmax, hπstart⟩ := hπ
-    unfold isMaximalPathFragment endStatePathFragment at hπmax
+    unfold PathFragment.isMaximal FinitePathFragment.endState at hπmax
     cases π with
     | finite p =>
       simp only at hπmax
@@ -2924,7 +2933,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
           simp only [Set.mem_setOf_eq, Set.mem_iUnion]
           use s, hs
           use (PathFragment.infinite p)
-          unfold PathsFromState isMaximalPathFragment endStatePathFragment
+          unfold PathsFromState PathFragment.isMaximal FinitePathFragment.endState
           simp only [Set.mem_setOf_eq, true_and]
           use hπstart
           unfold TraceFromPathFromInitialStateWTS TraceFromPathWTS
@@ -3107,8 +3116,8 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         apply (proofStructure 0).h₄
       · use (PathFragment.infinite π)
         constructor
-        · have hstart := path_starts_from_startState (PathFragment.infinite π) (by sorry)
-          unfold startStatePathFragment at hstart
+        · have hstart := PathFragment.starts_from_startState (PathFragment.infinite π) (by sorry)
+          unfold PathFragment.startState at hstart
           simp only at hstart
           assumption
         · unfold TraceFromPathFragment InfiniteTraceFromInfinitePathFragment
