@@ -128,6 +128,12 @@ def length_not {AP: Type} (ϕ : LTLFormula AP) : length (¬ ϕ) = 1 + length ϕ 
 def length_and {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ ∧ ψ) = 1 + length ϕ + length ψ := rfl
 
 @[simp]
+def length_next {AP: Type} (ϕ : LTLFormula AP) : length (◯ ϕ) = 1 + length ϕ := rfl
+
+@[simp]
+def length_until {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ 𝓤 ψ) = 1 + length ϕ + length ψ := rfl
+
+@[simp]
 def length_or {AP: Type} (ϕ ψ : LTLFormula AP) : length (ϕ ∨ ψ) = 4 + length ϕ + length ψ := by
   rw [or_def, length_not, length_and, length_not, length_not]
   omega
