@@ -5,6 +5,9 @@ This is a formalization of Linear Temporal Logic (LTL) in the Lean 4 theorem pro
 > [!NOTE]
 > This project is a work in progress and may not be ready for use as a dependency. Contributions and feedback are welcome!
 
+> [!WARNING]
+> Several recent changes, mainly for quality, have not been incorporated in this README.
+
 ## Overview
 
 [LTL](https://en.wikipedia.org/wiki/Linear_temporal_logic) is a logic for expressing constraints on *paths*. A *path* is a (countably infinite) sequence of *states*. A *state* is a set of propositional formulae (denoting the set of formulae that "hold in that state"). LTL provides operators for expressing constraints on states of a path, for instance, "formula $$X$$ holds in state $$S$$", "formula $$X$$ eventually holds after state $$S$$", "formula $$X$$ always holds after state $$S$$", etc. Paths can also be described as executions of a transition system. When dealing with paths with only finitely many propositional variables across all states (so that there are only finitely many inequivalent states, each of which can be thought of as a subset of the chosen set of propositional variables), LTL formulae can be equivalently described as automata (called [Büchi Automata](https://en.wikipedia.org/wiki/B%C3%BCchi_automaton)) which operate on infinite words (where the set of states is the alphabet).
