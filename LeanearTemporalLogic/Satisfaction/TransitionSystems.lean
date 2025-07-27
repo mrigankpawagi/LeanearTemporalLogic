@@ -1,8 +1,8 @@
 import Mathlib
 import LeanearTemporalLogic.Worlds
 import LeanearTemporalLogic.LTL
-import LeanearTemporalLogic.Satisfaction
-import LeanearTemporalLogic.SatisfactionLTL
+import LeanearTemporalLogic.Satisfaction.Basic
+import LeanearTemporalLogic.Satisfaction.LTL
 
 open TransitionSystem
 

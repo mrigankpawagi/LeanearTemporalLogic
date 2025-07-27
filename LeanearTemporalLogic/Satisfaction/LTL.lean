@@ -1,7 +1,7 @@
 import Mathlib
 import LeanearTemporalLogic.Worlds
 import LeanearTemporalLogic.LTL
-import LeanearTemporalLogic.Satisfaction
+import LeanearTemporalLogic.Satisfaction.Basic
 
 /-!
 ## Satisfaction of LTL Formulae
