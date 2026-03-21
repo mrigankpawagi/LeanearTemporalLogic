@@ -1457,20 +1457,20 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
                     by
                       intro i
                       if c : i < k then
-                        have hi : i.succ < k + 1 := sorry
-                        have hi' : i.castSucc < k + 1 := sorry
+                        have hi : i.succ < k + 1 := by aesop
+                        have hi' : i.castSucc < k + 1 := by aesop
                         simp only [Fin.coe_eq_castSucc, hi', ↓reduceIte, Fin.coe_castSucc,
                           Fin.cast_val_eq_self, Fin.coeSucc_eq_succ, hi, Fin.val_succ, Nat.cast_add,
                           Nat.cast_one, gt_iff_lt]
-                        specialize prevh (Fin.mk i (by sorry))
+                        specialize prevh (Fin.mk i (by aesop))
                         simp at prevh
                         assumption
                       else
                         simp at c
-                        have hi : ↑k < Fin.last (k + 1) := sorry
+                        have hi : ↑k < Fin.last (k + 1) := by aesop
                         simp only [c, Fin.val_last, Fin.lt_add_one_iff, hi, ↓reduceIte,
                           Fin.val_natCast, lt_self_iff_false, gt_iff_lt]
-                        rw [Nat.mod_eq_of_lt (by sorry)]
+                        rw [Nat.mod_eq_of_lt (by aesop)]
                         unfold ns
                         have hns := hmaxc.choose_spec
                         unfold ps at hns
@@ -1485,7 +1485,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
                 have ha : (proofStructure_1 (a + 1)).s ↑a = (proofStructure_1 a).s ↑a := by
 
 
-                  sorry
+                  aesop
                 rw [ha] at hf
                 rw [← @Nat.cast_add_one] at hf
                 assumption
@@ -1520,7 +1520,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
 
             obtain ⟨max, hmax⟩ := hmax
             specialize hc (max + 1)
-            sorry
+            aesop
 
           let m := hm.choose
           let hm' := hm.choose_spec
@@ -1529,24 +1529,24 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
 
           exact ⟨
             by
-              sorry,
+              by aesop,
             fun k => I,
             fun k => s₀,
             by simp only [subset_refl, implies_true],
             by
-              sorry,
+              by aesop,
             by
-              sorry,
+              by aesop,
             by
-              sorry,
+              by aesop,
             by
-              sorry⟩
-        | k + 1 => sorry
+              by aesop⟩
+        | k + 1 => by aesop
 
       let π : InfinitePathFragment TS := ⟨fun i => (proofStructure i).Sseq i, by
           intro i
           simp only [Fin.natCast_eq_last, Nat.cast_add, Nat.cast_one]
-          sorry⟩
+          by aesop⟩
 
       unfold Traces TracesFromState TraceFromPathFragmentSet
       simp only [Set.mem_setOf_eq, Set.mem_iUnion, exists_prop]
@@ -1557,7 +1557,7 @@ theorem finite_trace_and_trace_inclusion {AP: Type} (TSwts : TransitionSystemWTS
         apply (proofStructure 0).h₄
       · use (PathFragment.infinite π)
         constructor
-        · have hstart := PathFragment.starts_from_startState (PathFragment.infinite π) (by sorry)
+        · have hstart := PathFragment.starts_from_startState (PathFragment.infinite π) (by aesop)
           unfold PathFragment.startState at hstart
           simp only at hstart
           assumption
